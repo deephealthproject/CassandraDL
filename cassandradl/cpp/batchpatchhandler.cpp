@@ -73,8 +73,6 @@ BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
 	       [](const string& a, const string& b) -> string { 
 		 return a + (a.length() > 0 ? "," : "") + b; 
 	       } );
-  // set multi-label or not
-  multi_label = (num_classes>_max_multilabs) ? false : true;
 }
 
 vector<char> BatchPatchHandler::file2buf(string filename){
@@ -167,16 +165,10 @@ void BatchPatchHandler::get_img(const CassResult* result, int off, int wb){
 
   // convert label 
   float* p_labs = t_labs[wb]->ptr + off*num_classes;
-  if (multi_label){ // multi-label encoding
-    for(int i=0; i<num_classes; ++i){
-      *(p_labs++) = static_cast<float>(lab&1);
-      lab>>=1;
-    }
-  } else { // int to one-hot
-    for(int i=0; i<num_classes; ++i){
-      float b = (i==lab)? 1.0 : 0.0;
-      *(p_labs++) = b;
-    }
+  // int to one-hot
+  for(int i=0; i<num_classes; ++i){
+    float b = (i==lab)? 1.0 : 0.0;
+    *(p_labs++) = b;
   }
 }
 

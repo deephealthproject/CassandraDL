@@ -30,8 +30,6 @@ private:
   int wb0 = -1; // first buffer
   int thread_par; // thread parallelism
   int num_classes;
-  static const int _max_multilabs = 32;
-  bool multi_label;
   ecvl::Augmentation* aug = NULL;
   string table;
   string label_col;
