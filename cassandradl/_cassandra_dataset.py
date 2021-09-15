@@ -45,8 +45,8 @@ class PagedResultHandler():
 
 class CassandraListManager():
     def __init__(self, auth_prov, cassandra_ips, table,
-                 partition_cols, id_col, split_ncols=1, num_classes=2,
-                 seed=None, port=9042):
+                 partition_cols, id_col, label_col, split_ncols=1,
+                 num_classes=2, seed=None, port=9042):
         """Loads the list of patches from Cassandra DB
 
         :param auth_prov: Authenticator for Cassandra
@@ -54,6 +54,7 @@ class CassandraListManager():
         :param table: Matadata table with ids
         :param partition_cols: Cassandra partition key (e.g., ['name', 'label'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
+        :param label_col: Cassandra label column (e.g., 'label')
         :param split_ncols: How many columns of the partition key are to be considered when splitting data (default: 1)
         :param num_classes: Number of classes (default: 2)
         :param seed: Seed for random generators
@@ -84,6 +85,10 @@ class CassandraListManager():
         self.partition_cols = partition_cols
         self.split_ncols = split_ncols
         self.id_col = id_col
+        self.label_col = label_col
+        if (label_col != partition_cols[-1]):
+            raise ValueError('Last partition key must be the label: '\
+                             +f'{partition_cols[-1]} != {label_col}')
         self.seed = seed
         self.partitions = None
         self.sample_names = None
@@ -138,7 +143,7 @@ class CassandraListManager():
             while (len(loc_parts) > 0 and len(futures) < scan_par):
                 part = loc_parts.pop()
                 l = part[-1]  # label
-                sn = part[:self.split_ncols]  # sample name
+                sn = part[:self.split_ncols]  # grouping
                 res = self.sess.execute_async(prep, part,
                                               execution_profile='dict')
                 futures.append((sn, l, PagedResultHandler(res)))
@@ -426,7 +431,8 @@ class CassandraDataset():
         self._ignore_batches()
 
     def init_listmanager(self, table, partition_cols, id_col,
-                         split_ncols=1, num_classes=2, metatable=None):
+                         label_col='label', split_ncols=1,
+                         num_classes=2, metatable=None):
         """Initialize the Cassandra list manager.
 
         It takes care of loading/saving the full list of rows from the
@@ -436,6 +442,7 @@ class CassandraDataset():
         :param metatable: Metadata by uuid patch_id (optional)
         :param partition_cols: Cassandra partition key (e.g., ['name', 'label'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
+        :param label_col: Cassandra label column (default: 'label')
         :param split_ncols: How many columns of the partition key are to be considered when splitting data (default: 1)
         :param num_classes: Number of classes (default: 2)
         :returns:
@@ -443,6 +450,7 @@ class CassandraDataset():
 
         """
         self.id_col = id_col
+        self.label_col = label_col
         self.num_classes = num_classes
         self.metatable = metatable
         self._clm = CassandraListManager(auth_prov=self.auth_prov,
@@ -451,6 +459,7 @@ class CassandraDataset():
                                          table=table,
                                          partition_cols=partition_cols,
                                          id_col=self.id_col,
+                                         label_col=self.label_col,
                                          split_ncols=split_ncols,
                                          num_classes=self.num_classes,
                                          seed=self.seed)
@@ -458,20 +467,17 @@ class CassandraDataset():
     def init_datatable(
             self,
             table,
-            label_col='label',
             data_col='data',
             gen_handlers=False):
         """Setup queries for db table containing raw data
 
         :param table: Data table by ids
-        :param label_col: Cassandra label column (default: 'label')
         :param data_col: Cassandra blob image column (default: 'data')
         :returns:
         :rtype:
 
         """
         self.table = table
-        self.label_col = label_col
         self.data_col = data_col
         # if splits are set up, then recreate batch handlers
         if (gen_handlers):
@@ -560,12 +566,12 @@ class CassandraDataset():
         # recreate listmanager
         self.init_listmanager(table=clm_table, metatable=metatable,
                               partition_cols=clm_partition_cols,
-                              split_ncols=clm_split_ncols, id_col=self.id_col,
+                              split_ncols=clm_split_ncols,
+                              id_col=self.id_col, label_col=label_col,
                               num_classes=self.num_classes)
         # init data table
         self.init_datatable(
             table=table,
-            label_col=label_col,
             data_col=data_col,
             gen_handlers=False)
         # reload splits
