@@ -7,8 +7,8 @@ import uuid
 
 
 class CassandraWriter():
-    def __init__(self, auth_prov, cassandra_ips, table1, table2,
-                 table3, get_data):
+    def __init__(self, auth_prov, cassandra_ips, table_ids, table_data,
+                 table_metadata, get_data):
         self.get_data = get_data
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
@@ -19,11 +19,11 @@ class CassandraWriter():
                                protocol_version=4,
                                auth_provider=auth_prov)
         self.sess = self.cluster.connect()
-        query1 = f"INSERT INTO {table1} "\
+        query1 = f"INSERT INTO {table_ids} "\
             + f"(label, or_label, or_split, patch_id) VALUES (?,?,?,?)"
-        query2 = f"INSERT INTO {table2} "\
+        query2 = f"INSERT INTO {table_data} "\
             + "(patch_id, label, data) VALUES (?,?,?)"
-        query3 = f"INSERT INTO {table3} "\
+        query3 = f"INSERT INTO {table_metadata} "\
             + f"(label, or_label, or_split, patch_id) VALUES (?,?,?,?)"
         self.prep1 = self.sess.prepare(query1)
         self.prep2 = self.sess.prepare(query2)
