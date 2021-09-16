@@ -87,6 +87,14 @@ RUN \
 EXPOSE 9042
 ########################################################################
 
+########################################################################
+# Download the Imagenette dataset
+########################################################################
+WORKDIR /tmp
+RUN \
+    wget 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz' \
+    && tar xfz 'imagenette2-160.tgz'
+
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \

@@ -1,16 +1,46 @@
-# Cassandra Data Loader for EDDL
+# Cassandra Data Loader for the DeepHealth Toolkit
 
 ## Overview
 
 ## Installation
 
-The easiest way to run the Cassandra Data Loader together with the
-DeepHealth Toolkit is by using the provided Dockerfile, i.e.:
+The easiest way to test the Cassandra Data Loader is by using the
+provided Dockerfile, which also contains the DeepHealth Toolkit, an
+Apache Cassandra server and Apache Spark.
+
+The details of how to install the Cassandra Data Loader in a system
+which already provides the DeepHealth Toolkit can be easily deduced
+from the [Dockerfile](Dockerfile).
 
 ```bash
+## Build and run cassandradl docker container
 $ docker build -t cassandradl .
-$ docker run --rm -it cassandradl
-# python3 examples/loop_read.py
+$ docker run --rm -it --cap-add=sys_nice  cassandradl
+
+## Inside the Docker container:
+
+## - Start Cassandra server
+$ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL"
+
+## - Create tables
+$ cd examples/imagenette/
+$ /cassandra/bin/cqlsh -f create_tables.cql
+
+## - Fill tables with data and metadata
+$ python3 imagenette_serial.py --src-dir /tmp/imagenette2-160/
+
+## - Tight loop data loading test
+$ python3 loop_read.py
+
+## - Empty tables, to fill them again with Spark
+$ /cassandra/bin/cqlsh -f empty_tables.cql
+
+## - Start Spark master+worker
+$ sudo /spark/sbin/start-master.sh
+$ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
+
+## - Fill tables in parallel (20 jobs) with Spark
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files cassandra_writer.py,imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
 ```
 
 ## Requirements
@@ -30,11 +60,11 @@ Dockerfile.
 ## Further details
 
 
-## Author
+## Authors
 
 `CassandraDL` is developed by
   * Francesco Versaci, CRS4 <francesco.versaci@gmail.com>
-  * Giovanni Busonorea, CRS4 <giovanni.busonera@crs4.it>
+  * Giovanni Busonera, CRS4 <giovanni.busonera@crs4.it>
 
 ## License
 
