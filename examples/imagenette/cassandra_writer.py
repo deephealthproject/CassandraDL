@@ -7,8 +7,12 @@ import uuid
 
 
 class CassandraWriter():
-    def __init__(self, auth_prov, cassandra_ips, table_ids, table_data,
-                 table_metadata, get_data):
+    def __init__(self, auth_prov, cassandra_ips, table_ids,
+                 table_data, table_metadata, id_col, label_col,
+                 data_col, partition_cols, get_data):
+        if (label_col != partition_cols[-1]):
+            raise ValueError('Last partition key must be the label: '
+                             + f'{partition_cols[-1]} != {label_col}')
         self.get_data = get_data
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
@@ -20,11 +24,13 @@ class CassandraWriter():
                                auth_provider=auth_prov)
         self.sess = self.cluster.connect()
         query1 = f"INSERT INTO {table_ids} "\
-            + f"(label, or_label, or_split, patch_id) VALUES (?,?,?,?)"
+            + f"({id_col}, {', '.join(partition_cols)}) "\
+            + f"VALUES ({', '.join(['?']*(len(partition_cols)+1))})"
         query2 = f"INSERT INTO {table_data} "\
-            + "(patch_id, label, data) VALUES (?,?,?)"
+            + f"({id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
         query3 = f"INSERT INTO {table_metadata} "\
-            + f"(label, or_label, or_split, patch_id) VALUES (?,?,?,?)"
+            + f"({id_col}, {', '.join(partition_cols)}) "\
+            + f"VALUES ({', '.join(['?']*(len(partition_cols)+1))})"
         self.prep1 = self.sess.prepare(query1)
         self.prep2 = self.sess.prepare(query2)
         self.prep3 = self.sess.prepare(query3)
@@ -34,17 +40,13 @@ class CassandraWriter():
 
     def save_item(self, item):
         # if buffer full pop two elements from top
-        patch_id, label, data, or_label, or_split = item
-        i1 = self.sess.execute_async(self.prep1, (label,
-                                                  or_label,
-                                                  or_split,
-                                                  patch_id),
+        patch_id, label, data, partition_items = item
+        i1 = self.sess.execute_async(self.prep1, (patch_id,
+                                                  *partition_items),
                                      execution_profile='default',
                                      timeout=30)
-        i3 = self.sess.execute_async(self.prep3, (label,
-                                                  or_label,
-                                                  or_split,
-                                                  patch_id),
+        i3 = self.sess.execute_async(self.prep3, (patch_id,
+                                                  *partition_items),
                                      execution_profile='default',
                                      timeout=30)
         # wait for remaining async inserts to finish
@@ -54,10 +56,10 @@ class CassandraWriter():
         self.sess.execute(self.prep2, (patch_id, label, data),
                           execution_profile='default', timeout=30)
 
-    def save_image(self, path, label, or_label, or_split):
+    def save_image(self, path, partition_items):
         # read file into memory
         data = self.get_data(path)
         patch_id = uuid.uuid4()
-        item = patch_id, label, data, or_label, or_split
+        label = partition_items[-1]
+        item = (patch_id, label, data, partition_items)
         self.save_item(item)
-
