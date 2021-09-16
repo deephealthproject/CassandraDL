@@ -1,9 +1,7 @@
 //////////////////////////////////////////////////////////////////////
 // imagenette: https://github.com/fastai/imagenette
 
-// CREATE KEYSPACE imagenette WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
-// TRUNCATE TABLE imagenette.ids_160; TRUNCATE TABLE imagenette.data_160; TRUNCATE TABLE imagenette.metadata_160;
-// DROP TABLE imagenette.ids_160; DROP TABLE imagenette.data_160; DROP TABLE imagenette.metadata_160;
+CREATE KEYSPACE imagenette WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};
 
 // Mapping patch metadata to data via uuid
 CREATE TABLE imagenette.ids_160(
@@ -30,3 +28,6 @@ CREATE TABLE imagenette.metadata_160(
   patch_id uuid,
   PRIMARY KEY ((patch_id))
 );
+
+// TRUNCATE TABLE imagenette.ids_160; TRUNCATE TABLE imagenette.data_160; TRUNCATE TABLE imagenette.metadata_160;
+// DROP TABLE imagenette.ids_160; DROP TABLE imagenette.data_160; DROP TABLE imagenette.metadata_160;

@@ -48,6 +48,7 @@ RUN \
     psutils \
     source-highlight \
     ssh \
+    sudo \
     tmux \
     vim \
     wget \
@@ -59,7 +60,7 @@ RUN \
 # download and install spark
 RUN \
     cd /tmp && wget 'https://downloads.apache.org/spark/spark-3.1.2/spark-3.1.2-bin-hadoop3.2.tgz' \
-    && cd / && tar xfz /tmp/spark-3.1.2-bin-hadoop3.2.tgz \
+    && cd / && tar xfz '/tmp/spark-3.1.2-bin-hadoop3.2.tgz' \
     && ln -s 'spark-3.1.2-bin-hadoop3.2' spark
 
 # Install jdk
@@ -75,6 +76,24 @@ EXPOSE 7077
 EXPOSE 4040
 ########################################################################
 
-COPY . /cassandradl
-WORKDIR /cassandradl
+########################################################################
+# Cassandra server installation, to test imagenette-spark.py example
+########################################################################
+RUN \
+    cd /tmp && wget 'https://downloads.apache.org/cassandra/4.0.1/apache-cassandra-4.0.1-bin.tar.gz' \
+    && cd / && tar xfz '/tmp/apache-cassandra-4.0.1-bin.tar.gz' \
+    && ln -s 'apache-cassandra-4.0.1' cassandra
+
+EXPOSE 9042
+########################################################################
+
+RUN \
+    useradd -m -G sudo -s /usr/bin/fish -p '*' user \
+    && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
+    && chown -R user.user '/apache-cassandra-4.0.1'
+
+COPY . /home/user/cassandradl
+RUN chown -R user.user '/home/user/cassandradl'
+WORKDIR /home/user/cassandradl
 RUN pip3 install .
+USER user

@@ -1,5 +1,5 @@
 # Run with, e.g.,
-# spark-submit --master spark://spark-master:7077 --conf spark.default.parallelism=10 --py-files cassandra_writer.py,imagenette_common.py imagenette_spark.py --src-dir /tmp/imaginette2-160
+# /spark/sbin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files cassandra_writer.py,imagenette_common.py imagenette_spark.py --src-dir /tmp/imaginette2-160
 
 import argparse
 from getpass import getpass
