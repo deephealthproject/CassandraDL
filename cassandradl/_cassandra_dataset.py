@@ -281,7 +281,7 @@ class CassandraListManager():
             cur_sample = -1
         return cur_sample
 
-    def _fill_splits(self):
+    def _fill_splits(self, use_all_images=False):
         """ Insert into the splits, taking into account the target class balance
 
         :returns:
@@ -318,7 +318,10 @@ class CassandraListManager():
                 tmp = get_from_class[cl] * self.split_ratios.cumsum()
                 tmp = tmp.round().astype(int)
                 tmp = np.pad(tmp, [1, 0])
-                m_class = tmp[sp + 1] - tmp[sp]
+                if (use_all_images):
+                    m_class = avail_class[cl]
+                else:
+                    m_class = tmp[sp + 1] - tmp[sp]
                 cur_sample = 0
                 tot = 0
                 while (tot < m_class):
@@ -351,7 +354,8 @@ class CassandraListManager():
         self.row_keys = np.array(self.row_keys)
         self.n = self.row_keys.shape[0]  # set size
     def split_setup(self, max_patches=None, split_ratios=None,
-                    balance=None, seed=None, bags=None):
+                    balance=None, seed=None, bags=None,
+                    use_all_images=False):
         """(Re)Insert the patches in the splits, according to split and class ratios
 
         :param max_patches: Number of patches to be read. If None use the current value.
@@ -376,7 +380,7 @@ class CassandraListManager():
         else:
             self._split_groups()
         # fill splits from bags
-        self._fill_splits()
+        self._fill_splits(use_all_images=use_all_images)
 
 # ecvl reader for Cassandra
 
@@ -598,7 +602,7 @@ class CassandraDataset():
         self.locks = [threading.Lock() for i in range(self.num_splits)]
 
     def split_setup(self, max_patches=None, split_ratios=None, augs=None,
-                    balance=None, batch_size=None, seed=None, bags=None):
+                    balance=None, batch_size=None, seed=None, bags=None, use_all_images=False):
         """(Re)Insert the patches in the splits, according to split and class ratios
 
         :param max_patches: Number of patches to be read. If None use the current value.
@@ -613,7 +617,8 @@ class CassandraDataset():
         """
         self._clm.split_setup(max_patches=max_patches,
                               split_ratios=split_ratios,
-                              balance=balance, seed=seed, bags=bags)
+                              balance=balance, seed=seed, bags=bags,
+                              use_all_images=use_all_images)
         self.row_keys = self._clm.row_keys
         self.split = self._clm.split
         self.n = self._clm.n
