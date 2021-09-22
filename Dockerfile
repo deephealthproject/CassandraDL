@@ -1,4 +1,4 @@
-FROM dhealth/pylibs-toolkit:0.10.1-cudnn
+FROM dhealth/pylibs-toolkit:0.11.0-cudnn
 
 # install cassandra C++ driver
 RUN \
