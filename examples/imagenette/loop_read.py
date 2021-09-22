@@ -1,5 +1,6 @@
 from cassandradl import CassandraDataset
 
+import pyecvl.ecvl as ecvl
 from cassandra.auth import PlainTextAuthProvider
 from getpass import getpass
 from tqdm import trange, tqdm
@@ -33,12 +34,26 @@ for _ in range(5):
 
 # Create two splits using the original train/test partition
 # (split_ncols=1) and loading all the images, ignoring balance
+# Read images applying augmentations
+training_augs = ecvl.SequentialAugmentationContainer([
+    ecvl.AugMirror(.5),
+    ecvl.AugFlip(.5),
+    ecvl.AugRotate([-180, 180]),
+    #ecvl.AugAdditivePoissonNoise([0, 10]),
+    #ecvl.AugGammaContrast([0.5, 1.5]),
+    #ecvl.AugGaussianBlur([0, 0.8]),
+    #ecvl.AugCoarseDropout([0, 0.3], [0.02, 0.05], 0.5),
+])
+augs = [training_augs, None]
+
 cd.init_listmanager(table='imagenette.ids_160', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
                     split_ncols=1, num_classes=10)
 cd.read_rows_from_db()
 cd.init_datatable(table='imagenette.data_160')
-cd.split_setup(batch_size=128, split_ratios=[1,1], bags=[[('train',)], [('val',)]], use_all_images=True)
+cd.split_setup(batch_size=128, split_ratios=[1,1],
+               bags=[[('train',)], [('val',)]],
+               augs=augs, use_all_images=True)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
