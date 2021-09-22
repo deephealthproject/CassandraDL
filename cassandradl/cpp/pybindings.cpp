@@ -1,3 +1,9 @@
+// Copyright 2021 CRS4
+// 
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 namespace py = pybind11;

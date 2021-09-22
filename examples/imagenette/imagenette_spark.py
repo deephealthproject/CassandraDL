@@ -1,3 +1,9 @@
+# Copyright 2021 CRS4
+# 
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
 # Run with, e.g.,
 # /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files cassandra_writer.py,imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
 
