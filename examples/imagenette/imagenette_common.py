@@ -50,7 +50,7 @@ def save_images(cassandra_ip, cass_user, cass_pass):
                              id_col='patch_id',
                              label_col='label',
                              data_col='data',
-                             partition_cols=['or_split', 'or_label', 'label'],
+                             cols=['or_split', 'or_label', 'label'],
                              get_data=get_data)
         for path, partition_items in tqdm(jobs):
             cw.save_image(path, partition_items)

@@ -9,7 +9,7 @@ CREATE TABLE imagenette.ids_160(
   or_label text,
   or_split text,
   patch_id uuid,
-  PRIMARY KEY ((or_split, label), or_label, patch_id)
+  PRIMARY KEY ((or_split, label), patch_id)
 );
 
 // Mapping patch uuid to data and label

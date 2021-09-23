@@ -15,10 +15,10 @@ import uuid
 class CassandraWriter():
     def __init__(self, auth_prov, cassandra_ips, table_ids,
                  table_data, table_metadata, id_col, label_col,
-                 data_col, partition_cols, get_data):
-        if (label_col != partition_cols[-1]):
-            raise ValueError('Last partition key must be the label: '
-                             + f'{partition_cols[-1]} != {label_col}')
+                 data_col, cols, get_data):
+        if (label_col != cols[-1]):
+            raise ValueError('Last key must be the label: '
+                             + f'{cols[-1]} != {label_col}')
         self.get_data = get_data
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
@@ -30,13 +30,13 @@ class CassandraWriter():
                                auth_provider=auth_prov)
         self.sess = self.cluster.connect()
         query1 = f"INSERT INTO {table_ids} "\
-            + f"({id_col}, {', '.join(partition_cols)}) "\
-            + f"VALUES ({', '.join(['?']*(len(partition_cols)+1))})"
+            + f"({id_col}, {', '.join(cols)}) "\
+            + f"VALUES ({', '.join(['?']*(len(cols)+1))})"
         query2 = f"INSERT INTO {table_data} "\
             + f"({id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
         query3 = f"INSERT INTO {table_metadata} "\
-            + f"({id_col}, {', '.join(partition_cols)}) "\
-            + f"VALUES ({', '.join(['?']*(len(partition_cols)+1))})"
+            + f"({id_col}, {', '.join(cols)}) "\
+            + f"VALUES ({', '.join(['?']*(len(cols)+1))})"
         self.prep1 = self.sess.prepare(query1)
         self.prep2 = self.sess.prepare(query2)
         self.prep3 = self.sess.prepare(query3)
