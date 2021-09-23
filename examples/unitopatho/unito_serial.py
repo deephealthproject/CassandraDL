@@ -4,16 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-# Run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
-
 import argparse
 from getpass import getpass
-import imagenette_common
-from pyspark import StorageLevel
-from pyspark.conf import SparkConf
-from pyspark.context import SparkContext
-from pyspark.sql.session import SparkSession
+import os
+import unito_common
 
 
 def run(args):
@@ -26,19 +20,10 @@ def run(args):
         cass_pass = getpass('Insert Cassandra password: ')
 
     src_dir = args.src_dir
-    jobs = imagenette_common.get_jobs(src_dir)
-    # run spark
-    conf = SparkConf()\
-        .setAppName("Imagenette_160")
-    # .setMaster("spark://spark-master:7077")
-    sc = SparkContext(conf=conf)
-    spark = SparkSession(sc)
-    par_jobs = sc.parallelize(jobs)
-    par_jobs.foreachPartition(
-        imagenette_common.save_images(
-            cassandra_ip,
-            cass_user,
-            cass_pass))
+    for suffix in ['7000_224', '800']:
+        cur_dir = os.path.join(src_dir, suffix)
+        jobs = unito_common.get_jobs(cur_dir)
+        unito_common.save_images(cassandra_ip, cass_user, cass_pass, suffix)(jobs)
 
 
 # parse arguments

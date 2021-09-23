@@ -12,7 +12,7 @@ import io
 import numpy as np
 import os
 import uuid
-from cassandra_writer import CassandraWriter
+from cassandradl import CassandraWriter
 
 
 def get_data(path):

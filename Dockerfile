@@ -21,9 +21,8 @@ RUN \
 #install cassandra python driver + some python libraries
 RUN \
     pip3 install --upgrade --no-cache pillow \
-    && pip3 install --upgrade --no-cache tqdm numpy matplotlib \
-    && pip3 install --upgrade --no-cache opencv-python matplotlib \
-    && pip3 install --upgrade --no-cache cassandra-driver 
+    && pip3 install --upgrade --no-cache tqdm numpy matplotlib pandas \
+         matplotlib opencv-python cassandra-driver 
 
 # install some useful tools
 RUN \

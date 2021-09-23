@@ -16,9 +16,9 @@ class CassandraWriter():
     def __init__(self, auth_prov, cassandra_ips, table_ids,
                  table_data, table_metadata, id_col, label_col,
                  data_col, cols, get_data):
-        if (label_col != cols[-1]):
-            raise ValueError('Last key must be the label: '
-                             + f'{cols[-1]} != {label_col}')
+        if (not label_col in cols):
+            raise ValueError('Label key must also be in cols.')
+        self.idx_lab = cols.index(label_col)
         self.get_data = get_data
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
@@ -66,6 +66,6 @@ class CassandraWriter():
         # read file into memory
         data = self.get_data(path)
         patch_id = uuid.uuid4()
-        label = partition_items[-1]
+        label = partition_items[self.idx_lab]
         item = (patch_id, label, data, partition_items)
         self.save_item(item)

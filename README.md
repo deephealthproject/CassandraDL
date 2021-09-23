@@ -15,12 +15,12 @@ from the [Dockerfile](Dockerfile).
 ```bash
 ## Build and run cassandradl docker container
 $ docker build -t cassandradl .
-$ docker run --rm -it --cap-add=sys_nice  cassandradl
+$ docker run --rm -it --cap-add=sys_nice cassandradl
 
 ## Inside the Docker container:
 
 ## - Start Cassandra server
-$ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL"
+$ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL" (about 1 minute)
 
 ## - Create tables
 $ cd examples/imagenette/
@@ -40,7 +40,7 @@ $ sudo /spark/sbin/start-master.sh
 $ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 
 ## - Fill tables in parallel (20 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files cassandra_writer.py,imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
 ```
 
 ## Requirements
@@ -62,7 +62,7 @@ Dockerfile.
 
 ## Authors
 
-`CassandraDL` is developed by
+Cassandra Data Loader is developed by
   * Francesco Versaci, CRS4 <francesco.versaci@gmail.com>
   * Giovanni Busonera, CRS4 <giovanni.busonera@crs4.it>
 
