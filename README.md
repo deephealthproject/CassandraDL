@@ -21,6 +21,7 @@ $ docker run --rm -it --cap-add=sys_nice cassandradl
 
 ## - Start Cassandra server
 $ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL" (about 1 minute)
+                             #   (note that the shell prompt is immediately returned)
 
 ## - Create tables
 $ cd examples/imagenette/
@@ -31,6 +32,9 @@ $ python3 imagenette_serial.py --src-dir /tmp/imagenette2-160/
 
 ## - Tight loop data loading test
 $ python3 loop_read.py
+
+## - Simple VGG16 training (uses GPU as default)
+$ python3 train.py
 
 ## - Empty tables, to fill them again with Spark
 $ /cassandra/bin/cqlsh -f empty_tables.cql
