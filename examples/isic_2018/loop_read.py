@@ -23,9 +23,9 @@ except ImportError:
 
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
-cd = CassandraDataset(ap, [cassandra_ip])
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
+cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(table='isic.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
                     split_ncols=0, num_classes=10)
@@ -53,6 +53,7 @@ training_augs = ecvl.SequentialAugmentationContainer([
 ])
 augs = [training_augs, None, None]
 
+cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(table='isic.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
                     split_ncols=1, num_classes=10)
