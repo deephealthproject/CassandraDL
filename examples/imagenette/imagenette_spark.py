@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 # Run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-320
 
 import argparse
 from getpass import getpass
@@ -29,7 +29,7 @@ def run(args):
     jobs = imagenette_common.get_jobs(src_dir)
     # run spark
     conf = SparkConf()\
-        .setAppName("Imagenette_160")
+        .setAppName("Imagenette_224")
     # .setMaster("spark://spark-master:7077")
     sc = SparkContext(conf=conf)
     spark = SparkSession(sc)

@@ -91,8 +91,9 @@ EXPOSE 9042
 ########################################################################
 WORKDIR /tmp
 RUN \
-    wget 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-160.tgz' \
-    && tar xfz 'imagenette2-160.tgz'
+    wget 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz' \
+    && tar xfz 'imagenette2-320.tgz' \
+    && rm 'imagenette2-320.tgz'
 
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \

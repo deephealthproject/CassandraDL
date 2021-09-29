@@ -23,12 +23,12 @@ $ docker run --rm -it --cap-add=sys_nice cassandradl
 $ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL" (about 1 minute)
                              #   (note that the shell prompt is immediately returned)
 
-## - Create tables
+## - Create the tables
 $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
-## - Fill tables with data and metadata
-$ python3 imagenette_serial.py --src-dir /tmp/imagenette2-160/
+## - Fill the tables with data and metadata
+$ python3 imagenette_serial.py --src-dir /tmp/imagenette2-320/
 
 ## - Tight loop data loading test
 $ python3 loop_read.py
@@ -36,15 +36,15 @@ $ python3 loop_read.py
 ## - Simple VGG16 training (uses GPU as default)
 $ python3 train.py
 
-## - Empty tables, to fill them again with Spark
+## - Empty the tables, to fill them again using Spark
 $ /cassandra/bin/cqlsh -f empty_tables.cql
 
 ## - Start Spark master+worker
 $ sudo /spark/sbin/start-master.sh
 $ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 
-## - Fill tables in parallel (20 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-160
+## - Fill the tables in parallel (20 jobs) with Spark
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-320
 ```
 
 ## Requirements

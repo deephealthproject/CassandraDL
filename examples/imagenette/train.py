@@ -44,7 +44,7 @@ def accuracy(predictions, targets, epsilon=1e-12):
     return ce
 
 
-def get_net( net_name="vgg16", in_size=[160, 160], num_classes=10,
+def get_net( net_name="vgg16", in_size=[224, 224], num_classes=10,
              lr=1e-5, gpus=[1], lsb=1, init=eddl.HeNormal, dropout=None,
              l2_reg=None, ):
 
@@ -69,7 +69,7 @@ def get_net( net_name="vgg16", in_size=[160, 160], num_classes=10,
 
 def main(args):
     num_classes = 10
-    size = [160, 160]  # size of images
+    size = [224, 224]  # size of images
 
     # Parse GPU
     if args.gpu:
@@ -108,14 +108,14 @@ def main(args):
     cd = CassandraDataset(ap, [cassandra_ip])
 
     cd.init_listmanager(
-        table="imagenette.ids_160",
+        table="imagenette.ids_224",
         id_col="patch_id",
         partition_cols=["or_split", "label"],
         split_ncols=1,
         num_classes=num_classes,
     )
     cd.read_rows_from_db()
-    cd.init_datatable(table="imagenette.data_160")
+    cd.init_datatable(table="imagenette.data_224")
     cd.split_setup(
         batch_size=args.batch_size,
         split_ratios=[1, 1],

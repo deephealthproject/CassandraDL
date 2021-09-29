@@ -17,8 +17,8 @@ from cassandradl import CassandraWriter
 
 def get_data(path):
     img = Image.open(path).convert('RGB')
-    # resize and crop to 160x160
-    tg = 160
+    # resize and crop to 224x224
+    tg = 224
     sz = np.array(img.size)
     min_d = sz.min()
     sc = float(tg) / min_d
@@ -44,9 +44,9 @@ def save_images(cassandra_ip, cass_user, cass_pass):
 
     def ret(jobs):
         cw = CassandraWriter(auth_prov, [cassandra_ip],
-                             table_ids='imagenette.ids_160',
-                             table_data='imagenette.data_160',
-                             table_metadata='imagenette.metadata_160',
+                             table_ids='imagenette.ids_224',
+                             table_data='imagenette.data_224',
+                             table_metadata='imagenette.metadata_224',
                              id_col='patch_id',
                              label_col='label',
                              data_col='data',

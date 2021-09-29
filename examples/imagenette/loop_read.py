@@ -26,11 +26,11 @@ ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 cd = CassandraDataset(ap, [cassandra_ip])
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
-cd.init_listmanager(table='imagenette.ids_160', id_col='patch_id',
+cd.init_listmanager(table='imagenette.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
                     split_ncols=0, num_classes=10)
 cd.read_rows_from_db()
-cd.init_datatable(table='imagenette.data_160')
+cd.init_datatable(table='imagenette.data_224')
 cd.split_setup(batch_size=32, split_ratios=[7,2,1], max_patches=13500)
 
 for _ in range(5):
@@ -52,11 +52,11 @@ training_augs = ecvl.SequentialAugmentationContainer([
 ])
 augs = [training_augs, None]
 
-cd.init_listmanager(table='imagenette.ids_160', id_col='patch_id',
+cd.init_listmanager(table='imagenette.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
                     split_ncols=1, num_classes=10)
 cd.read_rows_from_db()
-cd.init_datatable(table='imagenette.data_160')
+cd.init_datatable(table='imagenette.data_224')
 cd.split_setup(batch_size=32, split_ratios=[1,1],
                bags=[[('train',)], [('val',)]],
                augs=augs, use_all_images=True)
