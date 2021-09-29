@@ -28,7 +28,7 @@ ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(table='isic.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
-                    split_ncols=0, num_classes=10)
+                    split_ncols=0, num_classes=7)
 cd.read_rows_from_db()
 cd.init_datatable(table='isic.data_224')
 cd.split_setup(batch_size=32, split_ratios=[7,2,1], max_patches=13500)
@@ -56,7 +56,7 @@ augs = [training_augs, None, None]
 cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(table='isic.ids_224', id_col='patch_id',
                     partition_cols=['or_split', 'label'],
-                    split_ncols=1, num_classes=10)
+                    split_ncols=1, num_classes=7)
 cd.read_rows_from_db()
 cd.init_datatable(table='isic.data_224')
 cd.split_setup(batch_size=32, split_ratios=[1,1,1],
