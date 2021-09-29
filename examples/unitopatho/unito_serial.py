@@ -33,5 +33,5 @@ if __name__ == "__main__":
         "--src-dir",
         metavar="DIR",
         required=True,
-        help="Specifies the input directory for Imagenette")
+        help="Specifies the input directory for UNITOPatho")
     run(parser.parse_args())
