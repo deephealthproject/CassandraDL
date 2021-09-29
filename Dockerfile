@@ -22,7 +22,7 @@ RUN \
 RUN \
     pip3 install --upgrade --no-cache pillow \
     && pip3 install --upgrade --no-cache tqdm numpy matplotlib pandas \
-         matplotlib opencv-python cassandra-driver 
+         matplotlib pyyaml opencv-python cassandra-driver 
 
 # install some useful tools
 RUN \
