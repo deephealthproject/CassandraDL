@@ -31,7 +31,7 @@ cd.init_listmanager(table='imagenette.ids_224', id_col='patch_id',
                     split_ncols=0, num_classes=10)
 cd.read_rows_from_db()
 cd.init_datatable(table='imagenette.data_224')
-cd.split_setup(batch_size=32, split_ratios=[7,2,1], max_patches=13500)
+cd.split_setup(batch_size=28, split_ratios=[7,2,1], max_patches=13500)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
@@ -57,7 +57,7 @@ cd.init_listmanager(table='imagenette.ids_224', id_col='patch_id',
                     split_ncols=1, num_classes=10)
 cd.read_rows_from_db()
 cd.init_datatable(table='imagenette.data_224')
-cd.split_setup(batch_size=32, split_ratios=[1,1],
+cd.split_setup(batch_size=28, split_ratios=[1,1],
                bags=[[('train',)], [('val',)]],
                augs=augs, use_all_images=True)
 

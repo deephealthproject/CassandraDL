@@ -51,7 +51,7 @@ def get_net( net_name="vgg16", in_size=[224, 224], num_classes=10,
     # Network definition
     in_ = eddl.Input([3, in_size[0], in_size[1]])
 
-    out = models.VGG16(in_, num_classes, init=init, l2_reg=l2_reg, dropout=dropout)
+    out = models.ResNet50(in_, num_classes, init=init, l2_reg=l2_reg, dropout=dropout)
 
     net = eddl.Model([in_], [out])
     eddl.build(
@@ -157,7 +157,6 @@ def main(args):
             eddl.train_batch(net, tx, ty)
 
             # print batch train results
-            instances = (b_index + 1) * args.batch_size
             loss = eddl.get_losses(net)[0]
             metr = eddl.get_metrics(net)[0]
             msg = (
@@ -211,7 +210,7 @@ if __name__ == "__main__":
         "--epochs", type=int, metavar="INT", default=10, help="Number of epochs"
     )
     parser.add_argument(
-        "--batch-size", type=int, metavar="INT", default=32, help="Batch size"
+        "--batch-size", type=int, metavar="INT", default=28, help="Batch size"
     )
     parser.add_argument(
         "--lsb",
