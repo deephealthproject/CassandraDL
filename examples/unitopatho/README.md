@@ -6,7 +6,8 @@ Cassandra dataset.
 
 The original dataset (275 GB) needs to be downloaded and unzipped
 before running the following commands (from the provided [Docker
-container](../../)).
+container](../../)), assuming `/data/unitopath-public/` as source
+directory.
 
 ```bash
 ## - Create the tables
