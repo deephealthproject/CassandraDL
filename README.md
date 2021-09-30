@@ -20,32 +20,19 @@ $ docker run --rm -it --cap-add=sys_nice cassandradl
 ## Inside the Docker container:
 
 ## - Start Cassandra server
-$ /cassandra/bin/cassandra   # - wait until "state jump to NORMAL" (about 1 minute)
-                             #   (note that the shell prompt is immediately returned)
-
-## - Create the tables
-$ cd examples/imagenette/
-$ /cassandra/bin/cqlsh -f create_tables.cql
-
-## - Fill the tables with data and metadata
-$ python3 imagenette_serial.py --src-dir /tmp/imagenette2-320/
-
-## - Tight loop data loading test
-$ python3 loop_read.py
-
-## - Simple VGG16 training (uses GPU as default)
-$ python3 train.py
-
-## - Empty the tables, to fill them again using Spark
-$ /cassandra/bin/cqlsh -f empty_tables.cql
+$ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returned
+                             # Wait until "state jump to NORMAL" is shown (about 1 minute)
 
 ## - Start Spark master+worker
 $ sudo /spark/sbin/start-master.sh
 $ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
-
-## - Fill the tables in parallel (20 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-320
 ```
+
+## Dataset examples
+
+- [Imagenette](examples/imagenette/)
+- [UNITOPatho](examples/unitopatho/)
+- [ISIC Skin Lesion 2018](examples/isic_2018/)
 
 ## Requirements
 
