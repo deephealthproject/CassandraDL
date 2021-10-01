@@ -25,4 +25,5 @@ $ python3 train.py
 
 ## - Optional: empty the tables
 $ /cassandra/bin/cqlsh -f empty_tables.cql
+$ /cassandra/bin/nodetool clearsnapshot --all -- imagenette
 ```
