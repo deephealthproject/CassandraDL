@@ -54,7 +54,7 @@ RUN \
     && rm -rf /var/lib/apt/lists/*
 
 ########################################################################
-# SPARK installation, to test imagenette-spark.py example
+# SPARK installation, to test examples
 ########################################################################
 # download and install spark
 RUN \
@@ -76,12 +76,16 @@ EXPOSE 4040
 ########################################################################
 
 ########################################################################
-# Cassandra server installation, to test imagenette-spark.py example
+# Cassandra server installation, to test examples
 ########################################################################
 RUN \
     cd /tmp && wget 'https://downloads.apache.org/cassandra/4.0.1/apache-cassandra-4.0.1-bin.tar.gz' \
     && cd / && tar xfz '/tmp/apache-cassandra-4.0.1-bin.tar.gz' \
     && ln -s 'apache-cassandra-4.0.1' cassandra
+
+# increase write timeout to 20 seconds
+RUN \
+    sed -i 's/^\(write_request_timeout_in_ms:\)\(.*\)/\1 20000/' /cassandra/conf/cassandra.yaml
 
 EXPOSE 9042
 ########################################################################

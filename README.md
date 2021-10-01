@@ -12,10 +12,14 @@ The details of how to install the Cassandra Data Loader in a system
 which already provides the DeepHealth Toolkit can be easily deduced
 from the [Dockerfile](Dockerfile).
 
+For better performance and for data persistence, it is strongly
+advised to mount a host directory for Cassandra on a fast disk (e.g.,
+`/mnt/fast_disk/cassandra`), as shown in the commands below.
+
 ```bash
 ## Build and run cassandradl docker container
 $ docker build -t cassandradl .
-$ docker run --rm -it --cap-add=sys_nice cassandradl
+$ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw --cap-add=sys_nice cassandradl
 
 ## Inside the Docker container:
 
@@ -47,7 +51,7 @@ Dockerfile.
 
 ## Documentation
 
-In progress...
+Sphinx-based, in progress...
 
 ## Further details
 
