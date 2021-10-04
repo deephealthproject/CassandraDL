@@ -2,6 +2,12 @@
 
 ## Overview
 
+CassandraDL is a data loader for the DeepHealth toolkit, which
+leverages [Apache Cassandra NoSQL DB](https://cassandra.apache.org/)
+for storing both data and metadata, making them efficiently available
+through the network, and allowing automatic split creation and easier
+data distribution.
+
 ## Installation
 
 The easiest way to test the Cassandra Data Loader is by using the
