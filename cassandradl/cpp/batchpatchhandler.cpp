@@ -31,9 +31,7 @@ void BatchPatchHandler::connect(){
   CassFuture* connect_future = cass_session_connect(session, cluster);
   CassError rc = cass_future_error_code(connect_future);
   cass_future_free(connect_future);
-  if (rc == CASS_OK) {
-    printf("Successfully connected!\n");
-  } else {
+  if (rc != CASS_OK) {
     throw runtime_error("Error: unable to connect to Cassandra DB. ");
   }
   // assemble query
