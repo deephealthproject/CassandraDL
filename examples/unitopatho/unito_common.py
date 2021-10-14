@@ -26,7 +26,7 @@ def save_images(cassandra_ip, cass_user, cass_pass, suffix):
     auth_prov = PlainTextAuthProvider(cass_user, cass_pass)
 
     def ret(jobs):
-        cols = ['image_id', 'top_label_name', 'top_label',
+        cols = ['image_id', 'top_label_name',
                   'type_name', 'type', 'grade_name', 'grade', 'wsi',
                   'roi', 'mpp', 'x', 'y', 'w', 'h', 'or_split']
         cw = CassandraWriter(auth_prov, [cassandra_ip],
@@ -38,8 +38,8 @@ def save_images(cassandra_ip, cass_user, cass_pass, suffix):
                              data_col='data',
                              cols=cols,
                              get_data=get_data)
-        for path, partition_items in tqdm(jobs):
-            cw.save_image(path, partition_items)
+        for path, label, partition_items in tqdm(jobs):
+            cw.save_image(path, label, partition_items)
     return(ret)
 
 
@@ -54,5 +54,6 @@ def get_jobs(src_dir):
             cur_dir = os.path.join(src_dir, r['top_label_name'])
             path = os.path.join(cur_dir, r['image_id'])
             partition_items = r.to_list() + [or_split]
-            jobs.append((path, partition_items))
+            label = partition_items.pop(2)
+            jobs.append((path, label, partition_items))
     return(jobs)

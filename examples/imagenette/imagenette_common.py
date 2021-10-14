@@ -50,10 +50,10 @@ def save_images(cassandra_ip, cass_user, cass_pass):
                              id_col='patch_id',
                              label_col='label',
                              data_col='data',
-                             cols=['or_split', 'or_label', 'label'],
+                             cols=['or_split', 'or_label'],
                              get_data=get_data)
-        for path, partition_items in tqdm(jobs):
-            cw.save_image(path, partition_items)
+        for path, label, partition_items in tqdm(jobs):
+            cw.save_image(path, label, partition_items)
     return(ret)
 
 
@@ -71,10 +71,10 @@ def get_jobs(src_dir):
                 labels[or_label] = ln
                 ln += 1
             label = labels[or_label]
-            partition_items = (or_split, or_label, label)
+            partition_items = (or_split, or_label)
             cur_dir = os.path.join(sp_dir, or_label)
             fns = os.listdir(cur_dir)
             for fn in fns:
                 path = os.path.join(cur_dir, fn)
-                jobs.append((path, partition_items))
+                jobs.append((path, label, partition_items))
     return(jobs)
