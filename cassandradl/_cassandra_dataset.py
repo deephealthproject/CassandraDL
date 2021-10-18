@@ -431,6 +431,8 @@ class CassandraDataset():
         self.previous_index = []
         self.batch_handler = []
         self.num_batches = []
+        self._whole_batches = None
+        self._loaded_batches = []
         self.locks = None
         self.n = None
         self.split = None
@@ -554,7 +556,7 @@ class CassandraDataset():
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
 
-    def load_splits(self, filename, batch_size=None, augs=None):
+    def load_splits(self, filename, batch_size=None, augs=None, whole_batches=False):
         """Load list of split ids and optionally set batch_size and augmentations.
 
         :param filename: Local filename, as string
@@ -585,6 +587,7 @@ class CassandraDataset():
             data_col=data_col,
             gen_handlers=False)
         # reload splits
+        self._whole_batches = whole_batches
         self.split = split
         self.n = self.row_keys.shape[0]  # set size
         num_splits = len(self.split)
@@ -607,8 +610,10 @@ class CassandraDataset():
         # create a lock per split
         self.locks = [threading.Lock() for i in range(self.num_splits)]
 
-    def split_setup(self, max_patches=None, split_ratios=None, augs=None,
-                    balance=None, batch_size=None, seed=None, bags=None, use_all_images=False):
+    def split_setup(self, max_patches=None, split_ratios=None,
+                    augs=None, balance=None, batch_size=None,
+                    seed=None, bags=None, use_all_images=False,
+                    whole_batches=False):
         """(Re)Insert the patches in the splits, according to split and class ratios
 
         :param max_patches: Number of patches to be read. If None use the current value.
@@ -628,14 +633,15 @@ class CassandraDataset():
         self.row_keys = self._clm.row_keys
         self.split = self._clm.split
         self.n = self._clm.n
+        self._whole_batches = whole_batches
         num_splits = self._clm.num_splits
         self._update_split_params(num_splits=num_splits, augs=augs,
                                   batch_size=batch_size)
         self._reset_indexes()
 
     def _ignore_batch(self, cs):
-        if (self.current_index[cs] > self.split[cs].shape[0]):
-            return  # end of split, nothing to wait for
+        if (self._loaded_batches[cs] == 0):
+            return  # nothing to wait for
         # wait for (and ignore) batch
         hand = self.batch_handler[cs]
         hand.ignore_batch()
@@ -656,9 +662,11 @@ class CassandraDataset():
         self.previous_index = []
         self.batch_handler = []
         self.num_batches = []
+        self._loaded_batches = []
         for cs in range(self.num_splits):
             self.current_index.append(0)
             self.previous_index.append(0)
+            self._loaded_batches.append(0)
             # set up handlers with augmentations
             if (len(self.augs) > cs):
                 aug = self.augs[cs]
@@ -675,8 +683,11 @@ class CassandraDataset():
                                         cassandra_ips=self.cassandra_ips,
                                         port=self.port)
             self.batch_handler.append(handler)
-            self.num_batches.append(
-                (self.split[cs].shape[0] + self.batch_size - 1) // self.batch_size)
+            if not self._whole_batches:
+                self.num_batches.append(
+                    (self.split[cs].shape[0] + self.batch_size - 1) // self.batch_size)
+            else:
+                self.num_batches.append(self.split[cs].shape[0] // self.batch_size)
             # preload batches
             self._preload_batch(cs)
 
@@ -726,6 +737,7 @@ class CassandraDataset():
                     self.split[cs] = np.random.permutation(self.split[cs])
                 # reset index and preload batch
                 self.current_index[cs] = 0
+                self._loaded_batches[cs] = 0
                 self._preload_batch(cs)
 
     def mix_splits(self, chosen_splits=[]):
@@ -757,6 +769,9 @@ class CassandraDataset():
         handler.schedule_batch(keys_)
 
     def _compute_batch(self, cs):
+        if (self._loaded_batches[cs] == 0):
+            raise RuntimeError(f'No more batches in split {cs}')
+        self._loaded_batches[cs] -= 1 # decrement loaded batches
         hand = self.batch_handler[cs]
         return(hand.block_get_batch())
 
@@ -769,7 +784,11 @@ class CassandraDataset():
             self._preload_batch(cs)
 
     def _preload_batch(self, cs):
-        if (self.current_index[cs] >= self.split[cs].shape[0]):
+        remaining = self.split[cs].shape[0] - self.current_index[cs] 
+        another_batch = remaining > 0
+        if self._whole_batches:
+            another_batch = remaining >= self.batch_size
+        if (not another_batch):
             self.previous_index[cs] = self.current_index[cs]  # save old index
             self.current_index[cs] += 1  # register overflow
             return  # end of split, stop prealoding
@@ -779,6 +798,7 @@ class CassandraDataset():
         self.current_index[cs] += idx_ar.size  # increment index
         bb = self.row_keys[idx_ar]
         self._save_futures(bb, cs)
+        self._loaded_batches[cs] += 1 # increment loaded batches for this split
 
     def load_batch(self, split=None):
         """Read a batch from Cassandra DB.
@@ -818,6 +838,8 @@ class CassandraDataset():
         ends = np.array([sp.shape[0] for sp in self.split])
         curr = np.array(self.current_index)
         ok = curr <= ends  # valid splits
+        if self._whole_batches:
+            ok = ok * (curr % self.batch_size == 0)
         for sp in ns:  # disable splits in ns
             ok[sp] = False
         sp_list = np.array(range(self.num_splits))
