@@ -110,8 +110,7 @@ def main(args):
     cd.init_listmanager(
         table="imagenette.ids_224",
         id_col="patch_id",
-        partition_cols=["or_split", "label"],
-        split_ncols=1,
+        grouping_cols=["or_split"],
         num_classes=num_classes,
     )
     cd.read_rows_from_db()

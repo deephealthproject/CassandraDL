@@ -109,8 +109,8 @@ def main(args):
     cd = CassandraDataset(ap, [cassandra_ip])
 
     cd.init_listmanager(table='unito.ids_7000_224', id_col='patch_id', label_col='top_label',
-                    partition_cols=['or_split', 'wsi', 'top_label'],
-                    split_ncols=1, num_classes=num_classes)
+                    grouping_cols=['or_split'],
+                    num_classes=num_classes)
     cd.read_rows_from_db()
     cd.init_datatable(table="unito.data_7000_224")
     cd.split_setup(

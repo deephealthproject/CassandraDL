@@ -29,8 +29,6 @@ cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(
     table="isic.ids_224",
     id_col="patch_id",
-    partition_cols=["or_split", "label"],
-    split_ncols=0,
     num_classes=7,
 )
 cd.read_rows_from_db()
@@ -43,7 +41,8 @@ for _ in range(5):
         x, y = cd.load_batch()
 
 # Create three splits using the original train/val/test partition
-# (split_ncols=1) and loading all the images, ignoring balance
+# (group by original split "or_split") and loading all the images,
+# ignoring balance.
 # Read images applying augmentations
 
 training_augs = ecvl.SequentialAugmentationContainer(
@@ -63,8 +62,8 @@ cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(
     table="isic.ids_224",
     id_col="patch_id",
-    partition_cols=["or_split", "label"],
-    split_ncols=1,
+    label_col="label",
+    grouping_cols=["or_split"],
     num_classes=7,
 )
 cd.read_rows_from_db()

@@ -25,13 +25,13 @@ except ImportError:
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
+# group by WSI, so that patches from the same slide don't end up in different splits
 cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(
     table="unito.ids_7000_224",
     id_col="patch_id",
     label_col="top_label",
-    partition_cols=["wsi", "or_split", "top_label"],
-    split_ncols=1,
+    grouping_cols=["wsi"],
     num_classes=6,
 )
 cd.read_rows_from_db()
@@ -65,8 +65,7 @@ cd.init_listmanager(
     table="unito.ids_7000_224",
     id_col="patch_id",
     label_col="top_label",
-    partition_cols=["or_split", "wsi", "top_label"],
-    split_ncols=1,
+    grouping_cols=["or_split"],
     num_classes=6,
 )
 cd.read_rows_from_db()
@@ -86,15 +85,14 @@ for _ in range(5):
 
 
 # Create two splits using the original train/test partition
-# (split_ncols=2) and loading all the images, ignoring balance
+# and loading all the images, ignoring balance
 
 cd = CassandraDataset(ap, [cassandra_ip])
 cd.init_listmanager(
     table="unito.ids_800",
     id_col="patch_id",
     label_col="top_label",
-    partition_cols=["or_split", "wsi", "top_label"],
-    split_ncols=1,
+    grouping_cols=["or_split"],
     num_classes=6,
 )
 cd.read_rows_from_db()

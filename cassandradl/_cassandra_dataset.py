@@ -30,17 +30,16 @@ from cassandra.cluster import ExecutionProfile
 
 class CassandraListManager():
     def __init__(self, auth_prov, cassandra_ips, table,
-                 partition_cols, id_col, label_col, split_ncols=1,
+                 id_col, label_col, grouping_cols, 
                  num_classes=2, seed=None, port=9042):
         """Loads the list of patches from Cassandra DB
 
         :param auth_prov: Authenticator for Cassandra
         :param cassandra_ips: List of Cassandra ip's
         :param table: Matadata table with ids
-        :param partition_cols: Cassandra partition key (e.g., ['name', 'label'])
+        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (e.g., 'label')
-        :param split_ncols: How many columns of the partition key are to be considered when splitting data (default: 1)
         :param num_classes: Number of classes (default: 2)
         :param seed: Seed for random generators
         :returns:
@@ -67,13 +66,9 @@ class CassandraListManager():
         self.sess = self.cluster.connect()
         self.table = table
         # row variables
-        self.partition_cols = partition_cols
-        self.split_ncols = split_ncols
+        self.grouping_cols = grouping_cols
         self.id_col = id_col
         self.label_col = label_col
-        if (label_col != partition_cols[-1]):
-            raise ValueError('Last partition key must be the label: '\
-                             +f'{partition_cols[-1]} != {label_col}')
         self.seed = seed
         self.partitions = None
         self.sample_names = None
@@ -97,7 +92,6 @@ class CassandraListManager():
         self.cluster.shutdown()
 
     def read_rows_from_db(self, scan_par=1, sample_whitelist=None):
-        self.grouping_cols = self.partition_cols[:self.split_ncols]
         # get list of all rows
         if self.grouping_cols:
             gc_query = ",".join(self.grouping_cols) + ","
@@ -180,7 +174,7 @@ class CassandraListManager():
         for i in range(self.num_splits):
             bags.append([])
         # no grouping? always use the same bag
-        if (self.split_ncols == 0):
+        if (not self.grouping_cols):
             bags = [[]] * self.num_splits
         # insert patches into bags until they're full
         cows = np.zeros([self.num_splits, self.num_classes])
@@ -398,9 +392,8 @@ class CassandraDataset():
     def __del__(self):
         self._ignore_batches()
 
-    def init_listmanager(self, table, partition_cols, id_col,
-                         label_col='label', split_ncols=1,
-                         num_classes=2, metatable=None):
+    def init_listmanager(self, table, id_col, label_col='label',
+                         grouping_cols=[], num_classes=2, metatable=None):
         """Initialize the Cassandra list manager.
 
         It takes care of loading/saving the full list of rows from the
@@ -408,10 +401,9 @@ class CassandraDataset():
 
         :param table: Metadata by natural keys
         :param metatable: Metadata by uuid patch_id (optional)
-        :param partition_cols: Cassandra partition key (e.g., ['name', 'label'])
+        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (default: 'label')
-        :param split_ncols: How many columns of the partition key are to be considered when splitting data (default: 1)
         :param num_classes: Number of classes (default: 2)
         :returns:
         :rtype:
@@ -425,10 +417,9 @@ class CassandraDataset():
                                          cassandra_ips=self.cassandra_ips,
                                          port=self.port,
                                          table=table,
-                                         partition_cols=partition_cols,
+                                         grouping_cols=grouping_cols,
                                          id_col=self.id_col,
                                          label_col=self.label_col,
-                                         split_ncols=split_ncols,
                                          num_classes=self.num_classes,
                                          seed=self.seed)
 
@@ -459,8 +450,8 @@ class CassandraDataset():
         :rtype:
 
         """
-        stuff = (self._clm.table, self._clm.partition_cols,
-                 self._clm.split_ncols, self.id_col, self.num_classes,
+        stuff = (self._clm.table, self._clm.grouping_cols,
+                 self.id_col, self.num_classes,
                  self._clm._rows, self.metatable)
 
         with open(filename, "wb") as f:
@@ -478,12 +469,12 @@ class CassandraDataset():
         with open(filename, "rb") as f:
             stuff = pickle.load(f)
 
-        (clm_table, clm_partition_cols, clm_split_ncols, self.id_col,
+        (clm_table, clm_grouping_cols, self.id_col,
          self.num_classes, clm_rows, metatable) = stuff
 
         self.init_listmanager(table=clm_table, metatable=metatable,
-                              partition_cols=clm_partition_cols,
-                              split_ncols=clm_split_ncols, id_col=self.id_col,
+                              grouping_cols=clm_grouping_cols,
+                              id_col=self.id_col,
                               num_classes=self.num_classes)
         self._clm.set_rows(clm_rows)
 
@@ -505,8 +496,8 @@ class CassandraDataset():
         :rtype:
 
         """
-        stuff = (self._clm.table, self._clm.partition_cols,
-                 self._clm.split_ncols, self.id_col, self.num_classes,
+        stuff = (self._clm.table, self._clm.grouping_cols,
+                 self.id_col, self.num_classes,
                  self.table, self.label_col, self.data_col,
                  self.row_keys, self.split, self.metatable)
         with open(filename, "wb") as f:
@@ -526,15 +517,14 @@ class CassandraDataset():
         with open(filename, "rb") as f:
             stuff = pickle.load(f)
 
-        (clm_table, clm_partition_cols,
-         clm_split_ncols, self.id_col, self.num_classes,
+        (clm_table, clm_grouping_cols,
+         self.id_col, self.num_classes,
          table, label_col, data_col,
          self.row_keys, split, metatable) = stuff
 
         # recreate listmanager
         self.init_listmanager(table=clm_table, metatable=metatable,
-                              partition_cols=clm_partition_cols,
-                              split_ncols=clm_split_ncols,
+                              grouping_cols=clm_grouping_cols,
                               id_col=self.id_col, label_col=label_col,
                               num_classes=self.num_classes)
         # init data table
