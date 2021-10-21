@@ -16,6 +16,7 @@ import time
 import threading
 from tqdm import trange, tqdm
 from BPH import BatchPatchHandler
+from collections import defaultdict
 
 # pip3 install cassandra-driver
 import cassandra
@@ -25,28 +26,6 @@ from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.cluster import ExecutionProfile
 
 # Handler for large query results
-
-
-class PagedResultHandler():
-    def __init__(self, future):
-        self.all_rows = []
-        self.error = None
-        self.finished_event = threading.Event()
-        self.future = future
-        self.future.add_callbacks(
-            callback=self.handle_page,
-            errback=self.handle_error)
-
-    def handle_page(self, rows):
-        self.all_rows += rows
-        if self.future.has_more_pages:
-            self.future.start_fetching_next_page()
-        else:
-            self.finished_event.set()
-
-    def handle_error(self, exc):
-        self.error = exc
-        self.finished_event.set()
 
 
 class CassandraListManager():
@@ -118,55 +97,32 @@ class CassandraListManager():
         self.cluster.shutdown()
 
     def read_rows_from_db(self, scan_par=1, sample_whitelist=None):
-        self.partitions = self.sess.execute(
-            f"SELECT DISTINCT \
-        {', '.join(self.partition_cols)} FROM {self.table} ;",
-            execution_profile='tuple',
-            timeout=90)
-        self.partitions = self.partitions.all()
+        self.grouping_cols = self.partition_cols[:self.split_ncols]
+        # get list of all rows
+        if self.grouping_cols:
+            gc_query = ",".join(self.grouping_cols) + ","
+        else:
+            gc_query = ""
+        query = f"SELECT {gc_query} {self.id_col}, {self.label_col} FROM {self.table} ;"
+        res = self.sess.execute(query, execution_profile="tuple")
+        all_rows = res.all()
+        while res.has_more_pages:
+            res.start_fetching_next_page()
+            all_rows += res.all()
+        # sort by grouping keys and labels
+        id_idx = len(self.grouping_cols)
+        lab_idx = id_idx + 1
+        self._rows = defaultdict(lambda: defaultdict(list))
+        for row in all_rows:
+            gr_val = row[:id_idx]
+            id_val = row[id_idx]
+            lab_val = row[lab_idx]
+            self._rows[gr_val][lab_val].append(id_val)
+        self.sample_names = list(self._rows.keys())
         if (sample_whitelist is not None):
-            parts = self.partitions
-            swl = sample_whitelist
-            self.partitions = [p for p in parts if p[:self.split_ncols] in swl]
-        self.sample_names = {name[:self.split_ncols]
-                             for name in self.partitions}
-        self.sample_names = list(self.sample_names)
+            self.sample_names = set(sample_whitelist).intersection(self.sample_names)
+            self.sample_names = list(self.sample_names)
         random.shuffle(self.sample_names)
-        query = f"SELECT {self.id_col} FROM {self.table} \
-        WHERE {'=? AND '.join(self.partition_cols)}=? ;"
-        prep = self.sess.prepare(query)
-        self._rows = {}
-        for sn in self.sample_names:
-            self._rows[sn] = {}
-            for l in self.labs:
-                self._rows[sn][l] = []
-        loc_parts = self.partitions.copy()
-        pbar = tqdm(desc='Scanning Cassandra partitions', total=len(loc_parts))
-        futures = []
-        # while there are partitions to be processed
-        while (len(loc_parts) > 0 or len(futures) > 0):
-            # fill the pool with samples
-            while (len(loc_parts) > 0 and len(futures) < scan_par):
-                part = loc_parts.pop()
-                l = part[-1]  # label
-                sn = part[:self.split_ncols]  # grouping
-                res = self.sess.execute_async(prep, part,
-                                              execution_profile='dict')
-                futures.append((sn, l, PagedResultHandler(res)))
-            # check if a query slot can be freed
-            for future in futures:
-                sn, l, handler = future
-                if(handler.finished_event.is_set()):
-                    if handler.error:
-                        raise handler.error
-                    res = handler.all_rows
-                    self._rows[sn][l] += res
-                    futures.remove(future)
-                    pbar.update(1)
-                    pbar.set_postfix_str(f'added {len(res):5} patches')
-            # sleep 1 ms
-            time.sleep(.001)
-        pbar.close()
         # shuffle all ids in sample bags
         for ks in self._rows.keys():
             for lab in self._rows[ks]:
@@ -765,8 +721,8 @@ class CassandraDataset():
             aug = self.augs[cs]
         # get and convert whole batch asynchronously
         handler = self.batch_handler[cs]
-        keys_ = [list(row.values())[0] for row in rows]
-        handler.schedule_batch(keys_)
+        #keys_ = [list(row.values())[0] for row in rows]
+        handler.schedule_batch(rows)
 
     def _compute_batch(self, cs):
         if (self._loaded_batches[cs] == 0):
