@@ -37,13 +37,14 @@ class CassandraListManager():
         :param auth_prov: Authenticator for Cassandra
         :param cassandra_ips: List of Cassandra ip's
         :param table: Matadata table with ids
-        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (e.g., 'label')
+        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param num_classes: Number of classes (default: 2)
         :param seed: Seed for random generators
-        :returns:
-        :rtype:
+        :param port: 
+        :returns: 
+        :rtype: 
 
         """
         random.seed(seed)
@@ -91,7 +92,7 @@ class CassandraListManager():
     def __del__(self):
         self.cluster.shutdown()
 
-    def read_rows_from_db(self, scan_par=1, sample_whitelist=None):
+    def read_rows_from_db(self, sample_whitelist=None):
         # get list of all rows
         if self.grouping_cols:
             gc_query = ",".join(self.grouping_cols) + ","
@@ -203,8 +204,8 @@ class CassandraListManager():
         :param sp: split/bag
         :param sample_num: group number
         :param lab: label
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
         bag = self._bags[sp]
@@ -218,8 +219,8 @@ class CassandraListManager():
         :param sp: split/bag
         :param sample_num: starting group number
         :param lab: required label
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
         max_sample = len(self._bags[sp])
@@ -240,8 +241,9 @@ class CassandraListManager():
     def _fill_splits(self, use_all_images=False):
         """ Insert into the splits, taking into account the target class balance
 
-        :returns:
-        :rtype:
+        :param use_all_images: Use all available images
+        :returns: 
+        :rtype: 
 
         """
         # init counter per each partition
@@ -318,8 +320,10 @@ class CassandraListManager():
         :param split_ratios: Ratio among training, validation and test. If None use the current value.
         :param balance: Ratio among the different classes. If None use the current value.
         :param seed: Seed for random generators
-        :returns:
-        :rtype:
+        :param bags: User provided bags for the each split
+        :param use_all_images: Use all available images
+        :returns: 
+        :rtype: 
 
         """
         # seed random generators
@@ -347,9 +351,10 @@ class CassandraDataset():
 
         :param auth_prov: Authenticator for Cassandra
         :param cassandra_ips: List of Cassandra ip's
+        :param port: TCP port to connect to (default: 9042)
         :param seed: Seed for random generators
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
         # seed random generators
@@ -400,13 +405,13 @@ class CassandraDataset():
         DB and creating the splits according to the user input.
 
         :param table: Metadata by natural keys
-        :param metatable: Metadata by uuid patch_id (optional)
-        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (default: 'label')
+        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param num_classes: Number of classes (default: 2)
-        :returns:
-        :rtype:
+        :param metatable: Metadata by uuid patch_id (optional)
+        :returns: 
+        :rtype: 
 
         """
         self.id_col = id_col
@@ -432,15 +437,12 @@ class CassandraDataset():
 
         :param table: Data table by ids
         :param data_col: Cassandra blob image column (default: 'data')
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
         self.table = table
         self.data_col = data_col
-        # if splits are set up, then recreate batch handlers
-        if (gen_handlers):
-            self._reset_indexes()
 
     def save_rows(self, filename):
         """Save full list of DB rows to file
@@ -478,15 +480,15 @@ class CassandraDataset():
                               num_classes=self.num_classes)
         self._clm.set_rows(clm_rows)
 
-    def read_rows_from_db(self, scan_par=1, sample_whitelist=None):
+    def read_rows_from_db(self, sample_whitelist=None):
         """Read the full list of rows from the DB.
 
-        :param scan_par: Increase parallelism while scanning Cassandra partitions. It can lead to DB overloading.
-        :returns:
-        :rtype:
+        :param sample_whitelist: Whitelist for group keys
+        :returns: 
+        :rtype: 
 
         """
-        self._clm.read_rows_from_db(scan_par, sample_whitelist)
+        self._clm.read_rows_from_db(sample_whitelist)
 
     def save_splits(self, filename):
         """Save list of split ids.
@@ -509,8 +511,9 @@ class CassandraDataset():
         :param filename: Local filename, as string
         :param batch_size: Dataset batch size
         :param augs: Data augmentations to be used. If None use the current ones.
-        :returns:
-        :rtype:
+        :param whole_batches: Use only full batches
+        :returns: 
+        :rtype: 
 
         """
         print('Loading splits...')
@@ -530,8 +533,7 @@ class CassandraDataset():
         # init data table
         self.init_datatable(
             table=table,
-            data_col=data_col,
-            gen_handlers=False)
+            data_col=data_col)
         # reload splits
         self._whole_batches = whole_batches
         self.split = split
@@ -568,8 +570,11 @@ class CassandraDataset():
         :param balance: Ratio among the different classes. If None use the current value.
         :param batch_size: Batch size. If None use the current value.
         :param seed: Seed for random generators
-        :returns:
-        :rtype:
+        :param bags: User provided bags for the each split
+        :param use_all_images: Use all available images
+        :param whole_batches: Use only full batches
+        :returns: 
+        :rtype: 
 
         """
         self._clm.split_setup(max_patches=max_patches,
@@ -668,8 +673,8 @@ class CassandraDataset():
 
         :param chosen_split: Split to be rewinded. If None rewind all the splits.
         :param shuffle: Apply random permutation (def: False)
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
         if (chosen_split is None):
