@@ -113,9 +113,6 @@ class CassandraListManager:
         query = f"SELECT {gc_query} {self.id_col}, {self.label_col} FROM {self.table} ;"
         res = self.sess.execute(query, execution_profile="tuple")
         all_rows = res.all()
-        while res.has_more_pages:
-            res.start_fetching_next_page()
-            all_rows += res.all()
         # sort by grouping keys and labels
         id_idx = len(self.grouping_cols)
         lab_idx = id_idx + 1
