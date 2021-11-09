@@ -91,16 +91,9 @@ vector<char> BatchPatchHandler::file2buf(string filename){
     throw runtime_error("Error reading file");
 }
 
-cv::Mat BatchPatchHandler::buf2mat(const vector<char>& buf){
-  cv::InputArray ia(buf);
-  cv::Mat img = cv::imdecode(ia, cv::IMREAD_UNCHANGED);
-  // img is BGR
-  return(img);
-} 
-
 ecvl::Image BatchPatchHandler::buf2img(const vector<char>& buf){
-  cv::Mat m = buf2mat(buf);
-  ecvl::Image r = ecvl::MatToImage(m);
+  ecvl::Image r;
+  ecvl::ImRead(buf, r, ecvl::ImReadMode::UNCHANGED);
   if (aug){
     aug->Apply(r);
   }

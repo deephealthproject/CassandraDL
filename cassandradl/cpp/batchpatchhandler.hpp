@@ -71,7 +71,6 @@ private:
   void check_connection();
   vector<char> file2buf(string filename);
   ecvl::Image buf2img(const vector<char>& buf);
-  cv::Mat buf2mat(const vector<char>& buf);
   void get_img(const CassResult* result, int off, int wb);
   void get_images(const vector<string>& keys, int wb);
   vector<CassFuture*> keys2futures(const vector<string>& keys);
