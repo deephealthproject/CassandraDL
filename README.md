@@ -61,6 +61,9 @@ Sphinx-based, in progress...
 
 ## Further details
 
+An article describing the architecture and performance of CassandraDL
+will be presented at [IEEE BigData 2021](http://bigdataieee.org/BigData2021/),
+in the Special Session on *Machine Learning on Big Data*.
 
 ## Authors
 
