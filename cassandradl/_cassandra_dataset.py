@@ -449,7 +449,7 @@ class CassandraDataset:
     def init_datatable(self, table, data_col="data"):
         """Setup queries for db table containing raw data
 
-        :param table: Data table by ids
+        :param table: Data table, index by the uuid
         :param data_col: Cassandra blob image column (default: 'data')
         :returns:
         :rtype:
