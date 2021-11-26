@@ -10,7 +10,7 @@ Welcome to CassandraDL's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   cassandradl._cassandra_dataset
+   cassandradl.CassandraDataset
    cassandradl._cassandra_writer
 
 Indices and tables
