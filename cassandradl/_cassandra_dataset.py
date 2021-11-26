@@ -446,7 +446,7 @@ class CassandraDataset:
             seed=self.seed,
         )
 
-    def init_datatable(self, table, data_col="data", gen_handlers=False):
+    def init_datatable(self, table, data_col="data"):
         """Setup queries for db table containing raw data
 
         :param table: Data table by ids
