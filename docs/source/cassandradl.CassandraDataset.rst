@@ -38,7 +38,7 @@ For example::
     table='patches.data_by_uuid'
   )
   
-The paramter ``grouping_cols`` (optionally) specifies the columns by
+The parameter ``grouping_cols`` (optionally) specifies the columns by
 which the images should be grouped, before dividing the groups among
 the splits. For example, in digital pathology contexts we typically
 want that all images of the same patient go either into the training
