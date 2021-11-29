@@ -67,7 +67,7 @@ Alternatively, it can be generated locally via Sphinx.
 
 To install Sphinx:
 ```bash
-$ pip3 install sphinx sphinx_rtd_theme
+$ pip3 install sphinx sphinx_rtd_theme sphinx-autoapi
 ```
 
 To generate the html documentation (accessible at location `docs/build/html/index.html`):

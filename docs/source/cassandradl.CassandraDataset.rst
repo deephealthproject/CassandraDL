@@ -4,7 +4,7 @@ cassandradl.CassandraDataset class
 The only class that the user needs to interact with, in order to use
 the Cassandra Data Loader, is ``cassandra_dataset.CassandraDataset``.
 
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.__init__
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.__init__
 
 Th class must be initialized with the credentials and the hostname for
 connecting to the Cassandra DB, as in the following example::
@@ -20,9 +20,9 @@ connecting to the Cassandra DB, as in the following example::
 The next step is initializing a list manager, reading metadata from
 the DB.
 
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.init_listmanager
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.read_rows_from_db
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.init_datatable
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.init_listmanager
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.read_rows_from_db
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.init_datatable
 
 For example::
 
@@ -49,7 +49,7 @@ After the list manager has been initialized and the metadata has been
 read from the DB, the splits can be created automatically, using the
 ``split_setup`` method.
 
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.split_setup
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.split_setup
 
 For example, creating three splits (training, validation and test),
 with a total of one million patches and proportions respectively 70%,
@@ -108,8 +108,8 @@ Once the splits have been created, they can easily be saved (together
 with all the table information), using the ``save_splits`` method and
 then reloaded with ``load_splits``.
 
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.save_splits
-.. automethod:: cassandradl._cassandra_dataset.CassandraDataset.load_splits
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.save_splits
+.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.load_splits
 
 For example::
   
