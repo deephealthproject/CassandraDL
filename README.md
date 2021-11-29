@@ -57,7 +57,23 @@ Dockerfile.
 
 ## Documentation
 
-Sphinx-based, in progress...
+Documentation (in progress...) for the latest WaveTF version is
+available via
+[ReadTheDocs](https://cassandradl.readthedocs.io/en/latest/).
+
+### Generation via Sphinx
+
+Alternatively, it can be generated locally via Sphinx.
+
+To install Sphinx:
+```bash
+$ pip3 install sphinx sphinx_rtd_theme
+```
+
+To generate the html documentation (accessible at location `docs/build/html/index.html`):
+```bash
+$ make -C docs/ html
+```
 
 ## Further details
 
