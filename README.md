@@ -57,7 +57,7 @@ Dockerfile.
 
 ## Documentation
 
-Documentation (in progress...) for the latest WaveTF version is
+Documentation (in progress...) for the latest CassandraDL version is
 available via
 [ReadTheDocs](https://cassandradl.readthedocs.io/en/latest/).
 
