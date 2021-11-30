@@ -131,8 +131,8 @@ And, to load an already existing split file::
 
   
 Once the splits are setup, it is finally possible to load batches of
-data and labels and pass them to a DeepHealth application, as shown in
-the following example::
+features and labels and pass them to a DeepHealth application, as
+shown in the following example::
   
   epochs = 50
   split = 0 # training
