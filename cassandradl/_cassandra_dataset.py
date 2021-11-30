@@ -395,6 +395,7 @@ class CassandraDataset:
         self.previous_index = []
         self.batch_handler = []
         self.num_batches = []
+        """Number of batches for each split"""
         self._whole_batches = None
         self._loaded_batches = []
         self.locks = None

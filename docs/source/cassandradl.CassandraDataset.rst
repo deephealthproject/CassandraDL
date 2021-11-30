@@ -4,7 +4,7 @@ cassandradl.CassandraDataset class
 The only class that the user needs to interact with, in order to use
 the Cassandra Data Loader, is ``cassandra_dataset.CassandraDataset``.
 
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.__init__
+.. autoapimethod:: cassandradl.CassandraDataset.__init__
 
 Th class must be initialized with the credentials and the hostname for
 connecting to the Cassandra DB, as in the following example::
@@ -20,9 +20,9 @@ connecting to the Cassandra DB, as in the following example::
 The next step is initializing a list manager, reading metadata from
 the DB.
 
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.init_listmanager
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.read_rows_from_db
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.init_datatable
+.. autoapimethod:: cassandradl.CassandraDataset.init_listmanager
+.. autoapimethod:: cassandradl.CassandraDataset.read_rows_from_db
+.. autoapimethod:: cassandradl.CassandraDataset.init_datatable
 
 For example::
 
@@ -49,7 +49,7 @@ After the list manager has been initialized and the metadata has been
 read from the DB, the splits can be created automatically, using the
 ``split_setup`` method.
 
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.split_setup
+.. autoapimethod:: cassandradl.CassandraDataset.split_setup
 
 For example, creating three splits (training, validation and test),
 with a total of one million patches and proportions respectively 70%,
@@ -108,8 +108,8 @@ Once the splits have been created, they can easily be saved (together
 with all the table information), using the ``save_splits`` method and
 then reloaded with ``load_splits``.
 
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.save_splits
-.. autoapimethod:: cassandradl._cassandra_dataset.CassandraDataset.load_splits
+.. autoapimethod:: cassandradl.CassandraDataset.save_splits
+.. autoapimethod:: cassandradl.CassandraDataset.load_splits
 
 For example::
   
@@ -128,4 +128,23 @@ And, to load an already existing split file::
   cd.load_splits(
     'splits/1M_3splits.pckl'
   )
+
   
+Once the splits are setup, it is finally possible to load batches of
+data and labels and pass them to a DeepHealth application, as shown in
+the following example::
+  
+  epochs = 50
+  split = 0 # training
+  cd.set_batchsize(32)
+  for _ in range(epochs):
+      cd.rewind_splits(shuffle=True)
+      for _ in range(cd.num_batches[split]):
+          x,y = cd.load_batch(split)
+          ## feed features and labels to DL engine [...]
+  
+.. autoapimethod:: cassandradl.CassandraDataset.set_batchsize
+.. autoapimethod:: cassandradl.CassandraDataset.rewind_splits
+.. autoapiattribute:: cassandradl.CassandraDataset.num_batches
+.. autoapimethod:: cassandradl.CassandraDataset.load_batch
+
