@@ -403,6 +403,8 @@ class CassandraDataset:
         self.split = None
         self.num_splits = None
         self._clm = None  # Cassandra list manager
+        self.smooth_eps = 0
+        """Epsilon value for label smoothing"""
 
     def __del__(self):
         self._ignore_batches()
@@ -696,6 +698,7 @@ class CassandraDataset:
                 cass_pass=ap.password,
                 cassandra_ips=self.cassandra_ips,
                 port=self.port,
+                smooth_eps=self.smooth_eps,
             )
             self.batch_handler.append(handler)
             if not self._whole_batches:

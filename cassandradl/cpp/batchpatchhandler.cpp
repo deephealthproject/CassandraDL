@@ -58,7 +58,7 @@ BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
 				     string data_col, string id_col,
 				     string username, string cass_pass,
 				     vector<string> cassandra_ips,
-				     int thread_par, int port) :
+				     int thread_par, int port, float smooth_eps) :
   thread_par(thread_par), num_classes(num_classes), aug(aug),
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(cass_pass), cassandra_ips(cassandra_ips),
@@ -77,6 +77,9 @@ BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
 	       [](const string& a, const string& b) -> string { 
 		 return a + (a.length() > 0 ? "," : "") + b; 
 	       } );
+  // label smoothing
+  smooth_zero = smooth_eps / (float) (num_classes-1);
+  smooth_one = 1.0 - smooth_eps;
 }
 
 vector<char> BatchPatchHandler::file2buf(string filename){
@@ -162,9 +165,9 @@ void BatchPatchHandler::get_img(const CassResult* result, int off, int wb){
 
   // convert label 
   float* p_labs = t_labs[wb]->ptr + off*num_classes;
-  // int to one-hot
+  // int to (smoothed) one-hot
   for(int i=0; i<num_classes; ++i){
-    float b = (i==lab)? 1.0 : 0.0;
+    float b = (i==lab)? smooth_one : smooth_zero;
     *(p_labs++) = b;
   }
 }
