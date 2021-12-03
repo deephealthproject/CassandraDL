@@ -63,7 +63,7 @@ available via
 
 ### Generation via Sphinx
 
-Alternatively, it can be generated locally via Sphinx.
+Alternatively, documentation can be generated locally via Sphinx.
 
 To install Sphinx:
 ```bash
