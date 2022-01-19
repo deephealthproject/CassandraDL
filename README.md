@@ -78,8 +78,26 @@ $ make -C docs/ html
 ## Further details
 
 An article describing the architecture and performance of CassandraDL
-will be presented at [IEEE BigData 2021](http://bigdataieee.org/BigData2021/),
-in the Special Session on *Machine Learning on Big Data*.
+has been presented at [IEEE BigData
+2021](http://bigdataieee.org/BigData2021/), in the Special Session on
+*Machine Learning on Big Data*. It is available either via
+[IEEE Xplore](https://ieeexplore.ieee.org/document/9672005) or
+the CRS4 publications repository [(direct link to
+PDF)](http://publications.crs4.it/pubdocs/2021/VB21/cassandra-ml.pdf).
+
+### Citation
+
+```bibtex
+@InProceedings{cassandradl,
+  author       = {Versaci, F. and Busonera, G.},
+  title        = {Scaling deep learning data management with Cassandra DB},
+  booktitle    = {2021 IEEE International Conference on Big Data (Big Data)},
+  month        = {december},
+  year         = {2021},
+  doi          = {10.1109/BigData52589.2021.9672005},
+  isbn         = {978-1-6654-3902-2},
+}
+```
 
 ## Authors
 
