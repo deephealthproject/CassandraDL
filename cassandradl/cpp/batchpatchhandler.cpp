@@ -155,12 +155,22 @@ void BatchPatchHandler::get_img(const CassResult* result, int off, int wb){
   ////////////////////////////////////////////////////////////////////////
   // copy image and label to tensors
   float* p_feats =t_feats[wb]->ptr + off*tot_dims;
-  uint8_t* p_im = im.data_;
-  for(int i=0; i<tot_dims; ++i){
-    *(p_feats++) = static_cast<float>(*(p_im++));
+  if (im.elemtype_ == ecvl::DataType::float32){
+    // image made of floats
+    float* p_im = reinterpret_cast<float*>(im.data_);
+    for(int i=0; i<tot_dims; ++i){
+      *(p_feats++) = *(p_im++);
+    }
+  }
+  else {
+    // image made if uint8
+    uint8_t* p_im = im.data_;
+    for(int i=0; i<tot_dims; ++i){
+      *(p_feats++) = static_cast<float>(*(p_im++));
+    }
   }
   // alternative way: using ecvl ImageToTensor
-  // Tensor* tf = t_feats.get();
+  // Tensor* tf = t_feats[wb].get();
   // ecvl::ImageToTensor(im, tf, off);
 
   // convert label 
