@@ -48,6 +48,7 @@ private:
   int port = 9042;
   float smooth_one = 1.0;
   float smooth_zero = 0.0;
+  bool rgb = false;
   // Cassandra connection and execution
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
@@ -84,7 +85,7 @@ public:
 		    string label_col, string data_col, string id_col,
 		    string username, string cass_pass,
 		    vector<string> cassandra_ips, int thread_par=32,
-		    int port=9042, float smooth_eps=0.0);
+		    int port=9042, float smooth_eps=0.0, bool rgb=false);
   ~BatchPatchHandler();
   void schedule_batch(const vector<py::object>& keys);
   pair<shared_ptr<Tensor>, shared_ptr<Tensor>> load_batch(const vector<string>& keys, int wb);

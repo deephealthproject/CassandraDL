@@ -13,7 +13,7 @@ using namespace pybind11::literals;
 
 PYBIND11_MODULE(BPH, m) {
   py::class_<BatchPatchHandler>(m, "BatchPatchHandler")
-    .def(py::init<int, ecvl::Augmentation*, string, string, string, string, string, string, vector<string>, int, int, float >(), "num_classes"_a, "aug"_a, "table"_a, "label_col"_a, "data_col"_a, "id_col"_a, "username"_a, "cass_pass"_a, "cassandra_ips"_a, "thread_par"_a=32, "port"_a=9042, "smooth_eps"_a=0.0)
+    .def(py::init<int, ecvl::Augmentation*, string, string, string, string, string, string, vector<string>, int, int, float, bool >(), "num_classes"_a, "aug"_a, "table"_a, "label_col"_a, "data_col"_a, "id_col"_a, "username"_a, "cass_pass"_a, "cassandra_ips"_a, "thread_par"_a=32, "port"_a=9042, "smooth_eps"_a=0.0, "rgb"_a=false)
     .def("schedule_batch", &BatchPatchHandler::schedule_batch, "keys"_a)
     .def("block_get_batch", &BatchPatchHandler::block_get_batch)
     .def("ignore_batch", &BatchPatchHandler::ignore_batch);

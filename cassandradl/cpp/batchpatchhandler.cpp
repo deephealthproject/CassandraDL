@@ -58,11 +58,12 @@ BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
 				     string data_col, string id_col,
 				     string username, string cass_pass,
 				     vector<string> cassandra_ips,
-				     int thread_par, int port, float smooth_eps) :
+				     int thread_par, int port,
+				     float smooth_eps, bool rgb) :
   thread_par(thread_par), num_classes(num_classes), aug(aug),
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(cass_pass), cassandra_ips(cassandra_ips),
-  port(port)
+  port(port), rgb(rgb)
 {
   // init multi-buffering variables
   bs.resize(max_buf);
@@ -97,6 +98,9 @@ vector<char> BatchPatchHandler::file2buf(string filename){
 ecvl::Image BatchPatchHandler::buf2img(const vector<char>& buf){
   ecvl::Image r;
   ecvl::ImRead(buf, r, ecvl::ImReadMode::UNCHANGED);
+  if (rgb){
+    ecvl::ChangeColorSpace(r, r, ecvl::ColorType::RGB);
+  }
   if (aug){
     aug->Apply(r);
   }

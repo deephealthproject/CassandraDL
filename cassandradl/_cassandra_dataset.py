@@ -403,8 +403,10 @@ class CassandraDataset:
         self.split = None
         self.num_splits = None
         self._clm = None  # Cassandra list manager
-        self.smooth_eps = 0
+        self.smooth_eps = 0.0
         """Epsilon value for label smoothing"""
+        self.rgb = False
+        """Convert images to RGB (default is BGR)"""
 
     def __del__(self):
         self._ignore_batches()
@@ -460,6 +462,7 @@ class CassandraDataset:
         """
         self.table = table
         self.data_col = data_col
+        self._reset_indexes()
 
     def save_rows(self, filename):
         """Save full list of DB rows to file
@@ -670,8 +673,9 @@ class CassandraDataset:
                     pass
 
     def _reset_indexes(self):
+        if not self.num_splits:
+            return
         self._ignore_batches()
-
         self.current_index = []
         self.previous_index = []
         self.batch_handler = []
@@ -699,6 +703,7 @@ class CassandraDataset:
                 cassandra_ips=self.cassandra_ips,
                 port=self.port,
                 smooth_eps=self.smooth_eps,
+                rgb=self.rgb,
             )
             self.batch_handler.append(handler)
             if not self._whole_batches:
@@ -709,6 +714,28 @@ class CassandraDataset:
                 self.num_batches.append(self.split[cs].shape[0] // self.batch_size)
             # preload batches
             self._preload_batch(cs)
+
+    def set_rgb(self, rgb=True):
+        """Set RGB value
+
+        :param rgb: True if using RGB (otherwise BGR)
+        :returns:
+        :rtype:
+
+        """
+        self.rgb = rgb
+        self._reset_indexes()
+
+    def set_smooth_eps(self, eps=0.0):
+        """Set epsilon value for label smoothing
+
+        :param eps: new epsilon
+        :returns:
+        :rtype:
+
+        """
+        self.smooth_eps = eps
+        self._reset_indexes()
 
     def set_batchsize(self, bs):
         """Change dataset batch size
