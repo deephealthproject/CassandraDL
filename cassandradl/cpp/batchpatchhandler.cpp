@@ -56,14 +56,15 @@ void BatchPatchHandler::connect(){
 BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
 				     string table, string label_col,
 				     string data_col, string id_col,
+				     vector<int> label_map,
 				     string username, string cass_pass,
 				     vector<string> cassandra_ips,
 				     int thread_par, int port,
 				     float smooth_eps, bool rgb) :
   thread_par(thread_par), num_classes(num_classes), aug(aug),
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
-  username(username), password(cass_pass), cassandra_ips(cassandra_ips),
-  port(port), rgb(rgb)
+  label_map(label_map), username(username), password(cass_pass),
+  cassandra_ips(cassandra_ips), port(port), rgb(rgb)
 {
   // init multi-buffering variables
   bs.resize(max_buf);
@@ -81,6 +82,8 @@ BatchPatchHandler::BatchPatchHandler(int num_classes, ecvl::Augmentation* aug,
   // label smoothing
   smooth_zero = smooth_eps / (float) (num_classes-1);
   smooth_one = 1.0 - smooth_eps;
+  // transforming labels?
+  use_label_map = !label_map.empty();
 }
 
 vector<char> BatchPatchHandler::file2buf(string filename){
@@ -132,6 +135,9 @@ void BatchPatchHandler::get_img(const CassResult* result, int off, int wb){
     cass_row_get_column_by_name(row, data_col.c_str());
   cass_int32_t lab;
   cass_value_get_int32(c_lab, &lab);
+  // if needed, map label to new one
+  if (use_label_map)
+    lab = label_map[lab];
   const cass_byte_t* data;
   size_t sz;
   cass_value_get_bytes(c_data, &data, &sz);
