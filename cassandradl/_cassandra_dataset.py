@@ -545,6 +545,7 @@ class CassandraDataset:
             self._clm.grouping_cols,
             self.id_col,
             self.num_classes,
+            self.label_map,
             self.table,
             self.label_col,
             self.data_col,
@@ -575,6 +576,7 @@ class CassandraDataset:
             clm_grouping_cols,
             self.id_col,
             self.num_classes,
+            label_map,
             table,
             label_col,
             data_col,
@@ -590,6 +592,7 @@ class CassandraDataset:
             grouping_cols=clm_grouping_cols,
             id_col=self.id_col,
             label_col=label_col,
+            label_map=label_map,
             num_classes=self.num_classes,
         )
         # init data table
