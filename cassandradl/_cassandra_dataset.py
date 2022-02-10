@@ -25,8 +25,6 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.cluster import ExecutionProfile
 
-# Handler for large query results
-
 
 class CassandraListManager:
     def __init__(
@@ -37,6 +35,7 @@ class CassandraListManager:
         id_col,
         label_col,
         grouping_cols,
+        label_map=[],
         num_classes=2,
         seed=None,
         port=9042,
@@ -49,6 +48,7 @@ class CassandraListManager:
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (e.g., 'label')
         :param grouping_cols: Columns to group by (e.g., ['patient_id'])
+        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
         :param num_classes: Number of classes (default: 2)
         :param seed: Seed for random generators
         :param port:
@@ -82,6 +82,7 @@ class CassandraListManager:
         self.grouping_cols = grouping_cols
         self.id_col = id_col
         self.label_col = label_col
+        self.label_map = label_map
         self.seed = seed
         self.partitions = None
         self.sample_names = None
@@ -121,6 +122,8 @@ class CassandraListManager:
             gr_val = row[:id_idx]
             id_val = row[id_idx]
             lab_val = row[lab_idx]
+            if self.label_map:
+                lab_val = self.label_map[lab_val]
             self._rows[gr_val][lab_val].append(id_val)
         self.sample_names = list(self._rows.keys())
         if sample_whitelist is not None:
@@ -383,6 +386,7 @@ class CassandraDataset:
         self.metatable = None
         self.id_col = None
         self.label_col = None
+        self.label_map = []
         self.data_col = None
         self.num_classes = None
         self.prep = None
@@ -403,8 +407,10 @@ class CassandraDataset:
         self.split = None
         self.num_splits = None
         self._clm = None  # Cassandra list manager
-        self.smooth_eps = 0
+        self.smooth_eps = 0.0
         """Epsilon value for label smoothing"""
+        self.rgb = False
+        """Convert images to RGB (default is BGR)"""
 
     def __del__(self):
         self._ignore_batches()
@@ -414,6 +420,7 @@ class CassandraDataset:
         table,
         id_col,
         label_col="label",
+        label_map=[],
         grouping_cols=[],
         num_classes=2,
         metatable=None,
@@ -426,6 +433,7 @@ class CassandraDataset:
         :param table: Metadata by natural keys
         :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param label_col: Cassandra label column (default: 'label')
+        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
         :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param num_classes: Number of classes (default: 2)
         :param metatable: Metadata by uuid patch_id (optional)
@@ -435,6 +443,7 @@ class CassandraDataset:
         """
         self.id_col = id_col
         self.label_col = label_col
+        self.label_map = label_map
         self.num_classes = num_classes
         self.metatable = metatable
         self._clm = CassandraListManager(
@@ -445,6 +454,7 @@ class CassandraDataset:
             grouping_cols=grouping_cols,
             id_col=self.id_col,
             label_col=self.label_col,
+            label_map=self.label_map,
             num_classes=self.num_classes,
             seed=self.seed,
         )
@@ -460,6 +470,7 @@ class CassandraDataset:
         """
         self.table = table
         self.data_col = data_col
+        self._reset_indexes()
 
     def save_rows(self, filename):
         """Save full list of DB rows to file
@@ -534,6 +545,7 @@ class CassandraDataset:
             self._clm.grouping_cols,
             self.id_col,
             self.num_classes,
+            self.label_map,
             self.table,
             self.label_col,
             self.data_col,
@@ -564,6 +576,7 @@ class CassandraDataset:
             clm_grouping_cols,
             self.id_col,
             self.num_classes,
+            label_map,
             table,
             label_col,
             data_col,
@@ -579,6 +592,7 @@ class CassandraDataset:
             grouping_cols=clm_grouping_cols,
             id_col=self.id_col,
             label_col=label_col,
+            label_map=label_map,
             num_classes=self.num_classes,
         )
         # init data table
@@ -670,8 +684,9 @@ class CassandraDataset:
                     pass
 
     def _reset_indexes(self):
+        if not self.num_splits:
+            return
         self._ignore_batches()
-
         self.current_index = []
         self.previous_index = []
         self.batch_handler = []
@@ -692,6 +707,7 @@ class CassandraDataset:
                 label_col=self.label_col,
                 data_col=self.data_col,
                 id_col=self.id_col,
+                label_map=self.label_map,
                 table=self.table,
                 aug=aug,
                 username=ap.username,
@@ -699,6 +715,7 @@ class CassandraDataset:
                 cassandra_ips=self.cassandra_ips,
                 port=self.port,
                 smooth_eps=self.smooth_eps,
+                rgb=self.rgb,
             )
             self.batch_handler.append(handler)
             if not self._whole_batches:
@@ -709,6 +726,39 @@ class CassandraDataset:
                 self.num_batches.append(self.split[cs].shape[0] // self.batch_size)
             # preload batches
             self._preload_batch(cs)
+
+    def set_label_map(self, label_map=[]):
+        """Set label map
+
+        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
+        :returns:
+        :rtype:
+
+        """
+        self.label_map = label_map
+        self._reset_indexes()
+
+    def set_rgb(self, rgb=True):
+        """Set RGB value
+
+        :param rgb: True if using RGB (otherwise BGR)
+        :returns:
+        :rtype:
+
+        """
+        self.rgb = rgb
+        self._reset_indexes()
+
+    def set_smooth_eps(self, eps=0.0):
+        """Set epsilon value for label smoothing
+
+        :param eps: new epsilon
+        :returns:
+        :rtype:
+
+        """
+        self.smooth_eps = eps
+        self._reset_indexes()
 
     def set_batchsize(self, bs):
         """Change dataset batch size
