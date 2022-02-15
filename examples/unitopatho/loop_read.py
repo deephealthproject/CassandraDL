@@ -36,7 +36,7 @@ cd.init_listmanager(
 )
 cd.read_rows_from_db()
 cd.init_datatable(table="unito.data_7000_224")
-cd.split_setup(batch_size=32, split_ratios=[7, 3], max_patches=10000)
+cd.split_setup(batch_size=32, split_ratios=[7, 2, 1], balance=[1]*6)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
@@ -72,10 +72,8 @@ cd.read_rows_from_db()
 cd.init_datatable(table="unito.data_7000_224")
 cd.split_setup(
     batch_size=32,
-    split_ratios=[1, 1],
     bags=[[("train",)], [("test",)]],
     augs=augs,
-    use_all_images=True,
 )
 
 for _ in range(5):
@@ -99,10 +97,7 @@ cd.read_rows_from_db()
 cd.init_datatable(table="unito.data_800")
 cd.split_setup(
     batch_size=8,
-    split_ratios=[1, 1],
     bags=[[("train",)], [("test",)]],
-    augs=None,
-    use_all_images=True,
 )
 
 # load from test set

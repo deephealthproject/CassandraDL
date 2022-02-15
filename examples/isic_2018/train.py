@@ -118,10 +118,7 @@ def main(args):
     cd.init_datatable(table="isic.data_224")
     cd.split_setup(
         batch_size=args.batch_size,
-        split_ratios=[1, 1, 1],
         bags=[[("training",)], [("validation",)], [("test",)]],
-        augs=None,
-        use_all_images=True,
     )
 
     num_batches_tr = cd.num_batches[0] - 1

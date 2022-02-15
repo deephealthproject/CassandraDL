@@ -97,6 +97,9 @@ class CassandraListManager:
         self._bags = None
         self._cow_rows = None
         self._stats = None
+        self._split_stats = None
+        self._split_stats_actual = None
+        self.actual_split_ratio = None
         self._rows = None
         self.balance = None
         self.split_ratios = None
@@ -151,11 +154,15 @@ class CassandraListManager:
         self._after_rows()
 
     def _update_target_params(self, max_patches=None, split_ratios=None, balance=None):
-        # update number of patches, default: all
-        if max_patches is not None:
-            self.max_patches = max_patches
-        if self.max_patches is None:  # if None use all patches
-            self.max_patches = int(self.tot)
+        # update number of patches, default: use all
+        self.max_patches = int(self.tot)
+        if max_patches is not None:  # use all patches
+            self.max_patches = min(max_patches, self.max_patches)
+        # update and normalize balance, default: uniform
+        self.balance = balance
+        if balance is not None:
+            self.balance = np.array(balance)
+            self.balance = self.balance / self.balance.sum()
         # update and normalize split ratios, default: [1]
         if split_ratios is not None:
             self.split_ratios = np.array(split_ratios)
@@ -163,13 +170,6 @@ class CassandraListManager:
             self.split_ratios = np.array([1])
         self.split_ratios = self.split_ratios / self.split_ratios.sum()
         assert self.num_splits == len(self.split_ratios)
-        # update and normalize balance, default: uniform
-        if balance is not None:
-            self.balance = np.array(balance)
-        if self.balance is None:  # default to uniform
-            self.balance = np.ones(self.num_classes)
-        assert self.balance.shape[0] == self.num_classes
-        self.balance = self.balance / self.balance.sum()
 
     def _split_groups(self):
         """partitioning groups of images in bags
@@ -188,7 +188,7 @@ class CassandraListManager:
         if not self.grouping_cols:
             bags = [[]] * self.num_splits
         # insert patches into bags until they're full
-        cows = np.zeros([self.num_splits, self.num_classes])
+        cows = np.zeros([self.num_splits, self.num_classes]).astype(int)
         curr = random.randint(0, self.num_splits - 1)  # start with random bag
         for (i, p_num) in enumerate(self._stats):
             skipped = 0
@@ -206,8 +206,15 @@ class CassandraListManager:
             cows[curr] += p_num
             curr += 1
             curr %= self.num_splits
-        # save bags
+        # save bags and split statistics
         self._bags = bags
+        if not self.grouping_cols:
+            self._split_stats = stop_at.round().astype(int)
+        else:
+            self._split_stats = cows
+        self.actual_split_ratio = (
+            self._split_stats.sum(axis=1) / self._split_stats.sum()
+        )
 
     def _enough_rows(self, sp, sample_num, lab):
         """Are there other rows available, given bag/sample/label?
@@ -245,10 +252,9 @@ class CassandraListManager:
             cur_sample = -1
         return cur_sample
 
-    def _fill_splits(self, use_all_images=False):
+    def _fill_splits(self):
         """Insert into the splits, taking into account the target class balance
 
-        :param use_all_images: Use all available images
         :returns:
         :rtype:
 
@@ -259,18 +265,20 @@ class CassandraListManager:
             self._cow_rows[sn] = {}
             for l in self._rows[sn].keys():
                 self._cow_rows[sn][l] = len(self._rows[sn][l])
-        borders = self.max_patches * self.balance.cumsum()
-        borders = borders.round().astype(int)
-        borders = np.pad(borders, [1, 0])
-        max_class = [borders[i + 1] - borders[i] for i in range(self.num_classes)]
-        max_class = np.array(max_class)
-        avail_class = self._stats.sum(axis=0)
-        get_from_class = np.min([max_class, avail_class], axis=0)
+
+        eff_max_patches = self.max_patches * self.split_ratios
+        if self.balance is not None:
+            bal_max_patches = (self._split_stats / self.balance).min(axis=1)
+            eff_max_patches = np.minimum(bal_max_patches, eff_max_patches)
+            get_from_class = (
+                (eff_max_patches.reshape([-1, 1]) * self.balance).round().astype(int)
+            )
+        else:
+            sample_ratio = self.max_patches / self.tot
+            get_from_class = (sample_ratio * self._split_stats).round().astype(int)
+
+        self._split_stats_actual = get_from_class
         tot_patches = get_from_class.sum()
-        borders = tot_patches * self.split_ratios.cumsum()
-        borders = borders.round().astype(int)
-        borders = np.pad(borders, [1, 0])
-        max_split = [borders[i + 1] - borders[i] for i in range(self.num_splits)]
         sp_rows = []
         pbar = tqdm(desc="Choosing patches", total=tot_patches)
         for sp in range(self.num_splits):  # for each split
@@ -278,13 +286,7 @@ class CassandraListManager:
             bag = self._bags[sp]
             max_sample = len(bag)
             for cl in range(self.num_classes):  # fill with each class
-                tmp = get_from_class[cl] * self.split_ratios.cumsum()
-                tmp = tmp.round().astype(int)
-                tmp = np.pad(tmp, [1, 0])
-                if use_all_images:
-                    m_class = avail_class[cl]
-                else:
-                    m_class = tmp[sp + 1] - tmp[sp]
+                m_class = get_from_class[sp][cl]
                 cur_sample = 0
                 tot = 0
                 while tot < m_class:
@@ -323,16 +325,14 @@ class CassandraListManager:
         balance=None,
         seed=None,
         bags=None,
-        use_all_images=False,
     ):
         """(Re)Insert the patches in the splits, according to split and class ratios
 
-        :param max_patches: Number of patches to be read. If None use the current value.
+        :param max_patches: Number of patches to be read. If None use all patches.
         :param split_ratios: Ratio among training, validation and test. If None use the current value.
         :param balance: Ratio among the different classes. If None use the current value.
         :param seed: Seed for random generators
         :param bags: User provided bags for the each split
-        :param use_all_images: Use all available images
         :returns:
         :rtype:
 
@@ -340,6 +340,9 @@ class CassandraListManager:
         # seed random generators
         random.seed(seed)
         np.random.seed(seed)
+        # if bags are provided, infer split_ratio
+        if bags:
+            split_ratios = [1] * len(bags)
         # update dataset parameters
         self.num_splits = len(split_ratios)
         self._update_target_params(
@@ -347,11 +350,25 @@ class CassandraListManager:
         )
         # divide groups into bags (saved as self._bags)
         if bags:
+            # user provided bags
             self._bags = bags
+            self._split_stats = np.zeros([self.num_splits, self.num_classes]).astype(
+                int
+            )
+            # compute stats for bags
+            for i in self.labs:
+                for e, b in enumerate(self._bags):
+                    for f in b:
+                        self._split_stats[e][i] += len(self._rows[f][i])
         else:
+            # automatic bags
             self._split_groups()
+
+        self.actual_split_ratio = (
+            self._split_stats.sum(axis=1) / self._split_stats.sum()
+        )
         # fill splits from bags
-        self._fill_splits(use_all_images=use_all_images)
+        self._fill_splits()
 
 
 # ecvl reader for Cassandra
@@ -631,19 +648,17 @@ class CassandraDataset:
         batch_size=None,
         seed=None,
         bags=None,
-        use_all_images=False,
         whole_batches=False,
     ):
         """(Re)Insert the patches in the splits, according to split and class ratios
 
-        :param max_patches: Number of patches to be read. If None use the current value.
+        :param max_patches: Number of patches to be read. If None use all images.
         :param split_ratios: Ratio among training, validation and test. If None use the current value.
         :param augs: Data augmentations to be used. If None use the current ones.
         :param balance: Ratio among the different classes. If None use the current value.
         :param batch_size: Batch size. If None use the current value.
         :param seed: Seed for random generators
         :param bags: User provided bags for the each split
-        :param use_all_images: Use all available images
         :param whole_batches: Use only full batches
         :returns:
         :rtype:
@@ -655,7 +670,6 @@ class CassandraDataset:
             balance=balance,
             seed=seed,
             bags=bags,
-            use_all_images=use_all_images,
         )
         self.row_keys = self._clm.row_keys
         self.split = self._clm.split

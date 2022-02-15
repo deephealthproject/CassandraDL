@@ -57,20 +57,22 @@ with a total of one million patches and proportions respectively 70%,
 
   cd.split_setup(
     split_ratios=[7,2,1],
+    balance=[1,1],
     max_patches=1000000
   )
 
-Note that if not specified ``balance`` defaults to uniform, i.e., the
-method will try to achieve a 1:1 balance among the classes. In this
-case, when using 2 classes the algorithm will try to fill the training
+The option ``balance`` asks the split manager to choose images such as
+to achieve a desired balance balance among the classes (in this case 1:1).
+In the example, the algorithm will try to fill the training
 set with 700,000 images, half of them of class 0 (e.g., normal) and
-the other half class 1 (e.g., tumor).
+the other half class 1 (e.g., tumor). If there are not enough images the loader
+will choose the maximum value that allows to maintain the desired balance.
   
-Same split ratios, but using all the images in the DB (and hence ignoring balance among classes)::
+Same split ratios, but using all the images in the DB and ignoring
+the balance among classes::
   
   cd.split_setup(
     split_ratios=[7,2,1],
-    use_all_images=True,
   )
   
 Apply some ECVL augmentations when loading the data::
