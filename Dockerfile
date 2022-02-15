@@ -1,4 +1,5 @@
-FROM dhealth/pylibs-toolkit:1.0.0-1-cudnn
+FROM dhealth/pylibs-toolkit:1.1.0-cudnn
+#FROM dhealth/pylibs-toolkit:1.0.0-1-cudnn
 
 # install cassandra C++ driver
 RUN \
@@ -78,10 +79,11 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
+ARG CASS_VERS=4.0.2
 RUN \
-    cd /tmp && wget 'https://downloads.apache.org/cassandra/4.0.1/apache-cassandra-4.0.1-bin.tar.gz' \
-    && cd / && tar xfz '/tmp/apache-cassandra-4.0.1-bin.tar.gz' \
-    && ln -s 'apache-cassandra-4.0.1' cassandra
+    cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
+    && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
+    && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
 # increase write timeout to 20 seconds
 RUN \
@@ -102,7 +104,7 @@ RUN \
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
-    && chown -R user.user '/apache-cassandra-4.0.1'
+    && chown -R user.user "/apache-cassandra-$CASS_VERS"
 
 COPY . /home/user/cassandradl
 RUN chown -R user.user '/home/user/cassandradl'
