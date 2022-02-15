@@ -44,9 +44,17 @@ def accuracy(predictions, targets, epsilon=1e-12):
     return ce
 
 
-def get_net( net_name="vgg16", in_size=[224, 224], num_classes=10,
-             lr=1e-5, gpus=[1], lsb=1, init=eddl.HeNormal, dropout=None,
-             l2_reg=None, ):
+def get_net(
+    net_name="vgg16",
+    in_size=[224, 224],
+    num_classes=10,
+    lr=1e-5,
+    gpus=[1],
+    lsb=1,
+    init=eddl.HeNormal,
+    dropout=None,
+    l2_reg=None,
+):
 
     # Network definition
     in_ = eddl.Input([3, in_size[0], in_size[1]])
@@ -116,9 +124,9 @@ def main(args):
     cd.read_rows_from_db()
     cd.init_datatable(table="imagenette.data_224")
     cd.split_setup(
-        batch_size=args.batch_size,
         bags=[[("train",)], [("val",)]],
     )
+    cd.set_batchsize(args.batch_size),
 
     num_batches_tr = cd.num_batches[0] - 1
     num_batches_val = cd.num_batches[1] - 1

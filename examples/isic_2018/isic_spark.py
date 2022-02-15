@@ -1,5 +1,5 @@
 # Copyright 2021 CRS4
-# 
+#
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
@@ -22,23 +22,20 @@ def run(args):
         from private_data import cassandra_ip, cass_user, cass_pass
     except ImportError:
         cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cass_user = getpass('Insert Cassandra user: ')
-        cass_pass = getpass('Insert Cassandra password: ')
+        cass_user = getpass("Insert Cassandra user: ")
+        cass_pass = getpass("Insert Cassandra password: ")
 
     src_dir = args.src_dir
     jobs = isic_common.get_jobs(src_dir)
     # run spark
-    conf = SparkConf()\
-        .setAppName("Imagenette_224")
+    conf = SparkConf().setAppName("Imagenette_224")
     # .setMaster("spark://spark-master:7077")
     sc = SparkContext(conf=conf)
     spark = SparkSession(sc)
     par_jobs = sc.parallelize(jobs)
     par_jobs.foreachPartition(
-        isic_common.save_images(
-            cassandra_ip,
-            cass_user,
-            cass_pass))
+        isic_common.save_images(cassandra_ip, cass_user, cass_pass)
+    )
 
 
 # parse arguments
@@ -48,5 +45,6 @@ if __name__ == "__main__":
         "--src-dir",
         metavar="DIR",
         required=True,
-        help="Specifies the input directory for ISIC classification 2018")
+        help="Specifies the input directory for ISIC classification 2018",
+    )
     run(parser.parse_args())

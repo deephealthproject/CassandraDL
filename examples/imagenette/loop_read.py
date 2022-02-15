@@ -34,7 +34,8 @@ cd.init_listmanager(
 )
 cd.read_rows_from_db()
 cd.init_datatable(table="imagenette.data_224")
-cd.split_setup(batch_size=28, split_ratios=[7, 2, 1])
+cd.split_setup(split_ratios=[7, 2, 1])
+cd.set_batchsize(28)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
@@ -68,10 +69,10 @@ cd.init_listmanager(
 cd.read_rows_from_db()
 cd.init_datatable(table="imagenette.data_224")
 cd.split_setup(
-    batch_size=28,
     bags=[[("train",)], [("val",)]],
     augs=augs,
 )
+cd.set_batchsize(28)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)

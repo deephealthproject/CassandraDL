@@ -89,15 +89,6 @@ Apply some ECVL augmentations when loading the data::
       split_ratios=[7, 2, 1],
       augs=augs,
   )
-  
-Generate only full batches (of 32 images per batch)::
-
-  cd.split_setup(
-    split_ratios=[7,2,1],
-    max_patches=1000000,
-    batch_size=32,
-    whole_batches=True,
-  )
 
 Create 10 splits, using a total of one million patches::
 
@@ -105,6 +96,11 @@ Create 10 splits, using a total of one million patches::
     split_ratios=[1]*10,
     max_patches=1000000
   )
+
+To set the batch size and specify to generate only full batches
+(i.e., 32 images also in the last batch)::
+
+  cd.set_batchsize(32, full_batches=True)
 
 Once the splits have been created, they can easily be saved (together
 with all the table information), using the ``save_splits`` method and

@@ -33,7 +33,8 @@ cd.init_listmanager(
 )
 cd.read_rows_from_db()
 cd.init_datatable(table="isic.data_224")
-cd.split_setup(batch_size=32, split_ratios=[7, 2, 1], balance=[1]*7)
+cd.split_setup(split_ratios=[7, 2, 1], balance=[1] * 7)
+cd.set_batchsize(32)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
@@ -69,10 +70,10 @@ cd.init_listmanager(
 cd.read_rows_from_db()
 cd.init_datatable(table="isic.data_224")
 cd.split_setup(
-    batch_size=32,
     bags=[[("training",)], [("validation",)], [("test",)]],
     augs=augs,
 )
+cd.set_batchsize(32)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
