@@ -557,19 +557,19 @@ class CassandraDataset:
         :rtype:
 
         """
-        stuff = (
-            self._clm.table,
-            self._clm.grouping_cols,
-            self.id_col,
-            self.num_classes,
-            self.label_map,
-            self.table,
-            self.label_col,
-            self.data_col,
-            self.row_keys,
-            self.split,
-            self.metatable,
-        )
+        stuff = {
+            "clm_table": self._clm.table,
+            "clm_grouping_cols": self._clm.grouping_cols,
+            "id_col": self.id_col,
+            "num_classes": self.num_classes,
+            "label_map": self.label_map,
+            "table": self.table,
+            "label_col": self.label_col,
+            "data_col": self.data_col,
+            "row_keys": self.row_keys,
+            "split": self.split,
+            "metatable": self.metatable,
+        }
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
 
@@ -588,19 +588,17 @@ class CassandraDataset:
         with open(filename, "rb") as f:
             stuff = pickle.load(f)
 
-        (
-            clm_table,
-            clm_grouping_cols,
-            self.id_col,
-            self.num_classes,
-            label_map,
-            table,
-            label_col,
-            data_col,
-            self.row_keys,
-            split,
-            metatable,
-        ) = stuff
+            clm_table = stuff["clm_table"]
+            clm_grouping_cols = stuff["clm_grouping_cols"]
+            self.id_col = stuff["id_col"]
+            self.num_classes = stuff["num_classes"]
+            label_map = stuff["label_map"]
+            table = stuff["table"]
+            label_col = stuff["label_col"]
+            data_col = stuff["data_col"]
+            self.row_keys = stuff["row_keys"]
+            split = stuff["split"]
+            metatable = stuff["metatable"]
 
         # recreate listmanager
         self.init_listmanager(
