@@ -90,6 +90,7 @@ public:
 		    int port=9042, float smooth_eps=0.0, bool rgb=false);
   ~BatchPatchHandler();
   void schedule_batch(const vector<py::object>& keys);
+  void schedule_batch_str(const vector<string>& keys);
   pair<shared_ptr<Tensor>, shared_ptr<Tensor>> load_batch(const vector<string>& keys, int wb);
   pair<shared_ptr<Tensor>, shared_ptr<Tensor>> block_get_batch();
   void ignore_batch();

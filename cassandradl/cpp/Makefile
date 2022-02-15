@@ -18,6 +18,9 @@ clean:
 BPH: pybindings.cpp batchpatchhandler.cpp
 	g++ $(CXXFLAGS) $(IXXFLAGS) -shared -fPIC $^ -o $@$(BIND_SUFF) $(LFLAGS)
 
+test: test.o batchpatchhandler.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LFLAGS)
+
 %.o : %.cpp
 	g++ $(CXXFLAGS) $(IXXFLAGS) -c -o $@ $< $(LFLAGS)
 
