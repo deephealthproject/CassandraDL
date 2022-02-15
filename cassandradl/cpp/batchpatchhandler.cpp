@@ -261,8 +261,6 @@ void BatchPatchHandler::check_connection(){
 }
 
 void BatchPatchHandler::schedule_batch(const vector<py::object>& keys){
-  int wb = write_buf.front();
-  write_buf.pop();
   // convert uuids to strings
   vector<string> ks;
   ks.reserve(keys.size());
@@ -270,6 +268,12 @@ void BatchPatchHandler::schedule_batch(const vector<py::object>& keys){
     string s = py::str(*it);
     ks.push_back(s);
   }
+  schedule_batch_str(ks);
+}
+
+void BatchPatchHandler::schedule_batch_str(const vector<string>& ks){
+  int wb = write_buf.front();
+  write_buf.pop();
   // if first batch, save it for lazy execution
   if (first_read){
     keys0 = ks;
