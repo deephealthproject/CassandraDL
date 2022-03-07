@@ -1,5 +1,5 @@
-FROM dhealth/pylibs-toolkit:1.1.0-cudnn
-#FROM dhealth/pylibs-toolkit:1.0.0-1-cudnn
+FROM dhealth/pylibs-toolkit:1.2.0-cudnn
+#FROM dhealth/pylibs-toolkit:1.1.0-cudnn
 
 # install cassandra C++ driver
 RUN \
@@ -79,7 +79,7 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_VERS=4.0.2
+ARG CASS_VERS=4.0.3
 RUN \
     cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
