@@ -1,5 +1,5 @@
 # Copyright 2021 CRS4
-# 
+#
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
@@ -15,8 +15,8 @@ def run(args):
         from private_data import cassandra_ip, cass_user, cass_pass
     except ImportError:
         cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cass_user = getpass('Insert Cassandra user: ')
-        cass_pass = getpass('Insert Cassandra password: ')
+        cass_user = getpass("Insert Cassandra user: ")
+        cass_pass = getpass("Insert Cassandra password: ")
 
     src_dir = args.src_dir
     jobs = isic_common.get_jobs(src_dir)
@@ -30,5 +30,6 @@ if __name__ == "__main__":
         "--src-dir",
         metavar="DIR",
         required=True,
-        help="Specifies the input directory for ISIC classification 2018")
+        help="Specifies the input directory for ISIC classification 2018",
+    )
     run(parser.parse_args())

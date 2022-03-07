@@ -44,9 +44,17 @@ def accuracy(predictions, targets, epsilon=1e-12):
     return ce
 
 
-def get_net( net_name="vgg16", in_size=[224, 224], num_classes=10,
-             lr=1e-5, gpus=[1], lsb=1, init=eddl.HeNormal, dropout=None,
-             l2_reg=None, ):
+def get_net(
+    net_name="vgg16",
+    in_size=[224, 224],
+    num_classes=10,
+    lr=1e-5,
+    gpus=[1],
+    lsb=1,
+    init=eddl.HeNormal,
+    dropout=None,
+    l2_reg=None,
+):
 
     # Network definition
     in_ = eddl.Input([3, in_size[0], in_size[1]])
@@ -57,7 +65,7 @@ def get_net( net_name="vgg16", in_size=[224, 224], num_classes=10,
     eddl.build(
         net,
         eddl.rmsprop(lr),
-        #eddl.sgd(lr),
+        # eddl.sgd(lr),
         ["categorical_cross_entropy"],
         ["categorical_accuracy"],
         eddl.CS_GPU(gpus, mem="full_mem", lsb=lsb) if gpus else eddl.CS_CPU(),
@@ -117,12 +125,9 @@ def main(args):
     cd.read_rows_from_db()
     cd.init_datatable(table="isic.data_224")
     cd.split_setup(
-        batch_size=args.batch_size,
-        split_ratios=[1, 1, 1],
         bags=[[("training",)], [("validation",)], [("test",)]],
-        augs=None,
-        use_all_images=True,
     )
+    cd.set_batchsize(args.batch_size)
 
     num_batches_tr = cd.num_batches[0] - 1
     num_batches_val = cd.num_batches[1] - 1
