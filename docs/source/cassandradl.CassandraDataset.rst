@@ -22,7 +22,6 @@ the DB.
 
 .. autoapimethod:: cassandradl.CassandraDataset.init_listmanager
 .. autoapimethod:: cassandradl.CassandraDataset.read_rows_from_db
-.. autoapimethod:: cassandradl.CassandraDataset.init_datatable
 
 For example::
 
@@ -34,9 +33,6 @@ For example::
     num_classes=2
   )
   cd.read_rows_from_db()
-  cd.init_datatable(
-    table='patches.data_by_uuid'
-  )
   
 The parameter ``grouping_cols`` (optionally) specifies the columns by
 which the images should be grouped, before dividing the groups among
@@ -74,8 +70,29 @@ the balance among classes::
   cd.split_setup(
     split_ratios=[7,2,1],
   )
-  
-Apply some ECVL augmentations when loading the data::
+
+Create 10 splits, using a total of one million patches::
+
+  cd.split_setup(
+    split_ratios=[1]*10,
+    max_patches=1000000
+  )
+
+After the splits have been created we can configure the data loader
+using the ``set_config`` method.
+
+.. autoapimethod:: cassandradl.CassandraDataset.set_config
+
+		   
+We can, e.g., specify the table from which the actual data are read
+and the batch size::
+		   
+  cd.set_config(
+    table='patches.data_by_uuid',
+    bs=32
+  )
+
+It is also Apply some ECVL augmentations when loading the data::
 
   training_augs = ecvl.SequentialAugmentationContainer(
       [
@@ -85,24 +102,23 @@ Apply some ECVL augmentations when loading the data::
       ]
   )
   augs = [training_augs, None, None]
-  cd.split_setup(
-      split_ratios=[7, 2, 1],
-      augs=augs,
+  cd.set_config(
+    table='patches.data_by_uuid',
+    bs=32
+    augs=augs,
   )
 
-Create 10 splits, using a total of one million patches::
-
-  cd.split_setup(
-    split_ratios=[1]*10,
-    max_patches=1000000
-  )
 
 To set the batch size and specify to generate only full batches
 (i.e., 32 images also in the last batch)::
 
-  cd.set_batchsize(32, full_batches=True)
+  cd.set_config(
+    table='patches.data_by_uuid',
+    bs=32,
+    full_batches=True
+  )
 
-Once the splits have been created, they can easily be saved (together
+After the splits have been created, they can easily be saved (together
 with all the table information), using the ``save_splits`` method and
 then reloaded with ``load_splits``.
 
@@ -126,6 +142,7 @@ And, to load an already existing split file::
   cd.load_splits(
     'splits/1M_3splits.pckl'
   )
+  cd.set_config(bs=32)
 
   
 Once the splits are setup, it is finally possible to load batches of
@@ -134,14 +151,12 @@ shown in the following example::
   
   epochs = 50
   split = 0 # training
-  cd.set_batchsize(32)
   for _ in range(epochs):
       cd.rewind_splits(shuffle=True)
       for _ in range(cd.num_batches[split]):
           x,y = cd.load_batch(split)
           ## feed features and labels to DL engine [...]
   
-.. autoapimethod:: cassandradl.CassandraDataset.set_batchsize
 .. autoapimethod:: cassandradl.CassandraDataset.rewind_splits
 .. autoapiattribute:: cassandradl.CassandraDataset.num_batches
 .. autoapimethod:: cassandradl.CassandraDataset.load_batch

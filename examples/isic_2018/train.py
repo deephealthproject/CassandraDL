@@ -123,11 +123,10 @@ def main(args):
         num_classes=num_classes,
     )
     cd.read_rows_from_db()
-    cd.init_datatable(table="isic.data_224")
     cd.split_setup(
         bags=[[("training",)], [("validation",)], [("test",)]],
     )
-    cd.set_batchsize(args.batch_size)
+    cd.set_config(bs=args.batch_size, table="isic.data_224")
 
     num_batches_tr = cd.num_batches[0] - 1
     num_batches_val = cd.num_batches[1] - 1

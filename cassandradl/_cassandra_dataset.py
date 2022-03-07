@@ -400,24 +400,23 @@ class CassandraDataset:
         self.port = port
         # query variables
         self.table = None
-        self.metatable = None
         self.id_col = None
         self.label_col = None
         self.label_map = []
-        self.data_col = None
+        self.data_col = "data"
         self.num_classes = None
         self.prep = None
         # internal parameters
         self.row_keys = None
-        self.augs = None
-        self.batch_size = None
+        self.augs = []
+        self.batch_size = 1
         self.current_split = 0
         self.current_index = []
         self.previous_index = []
         self.batch_handler = []
         self.num_batches = []
         """Number of batches for each split"""
-        self._full_batches = None
+        self._full_batches = False
         self._loaded_batches = []
         self.locks = None
         self.n = None
@@ -440,7 +439,6 @@ class CassandraDataset:
         label_map=[],
         grouping_cols=[],
         num_classes=2,
-        metatable=None,
     ):
         """Initialize the Cassandra list manager.
 
@@ -453,7 +451,6 @@ class CassandraDataset:
         :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
         :param grouping_cols: Columns to group by (e.g., ['patient_id'])
         :param num_classes: Number of classes (default: 2)
-        :param metatable: Metadata by uuid patch_id (optional)
         :returns:
         :rtype:
 
@@ -462,7 +459,6 @@ class CassandraDataset:
         self.label_col = label_col
         self.label_map = label_map
         self.num_classes = num_classes
-        self.metatable = metatable
         self._clm = CassandraListManager(
             auth_prov=self.auth_prov,
             cassandra_ips=self.cassandra_ips,
@@ -476,17 +472,51 @@ class CassandraDataset:
             seed=self.seed,
         )
 
-    def init_datatable(self, table, data_col="data"):
-        """Setup queries for db table containing raw data
+    def set_config(
+        self,
+        bs=None,
+        table=None,
+        data_col=None,
+        full_batches=None,
+        augs=None,
+        label_map=None,
+        rgb=None,
+        smooth_eps=None,
+    ):
+        """Set data loading configuration parameters
 
-        :param table: Data table, index by the uuid
+        :param bs: Batch size when loading data
+        :param full_batches: Use only full batches
+        :param table: Data table, indexed by uuid
         :param data_col: Cassandra blob image column (default: 'data')
+        :param augs: Data augmentations to be used
+        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
+        :param rgb: True if using RGB (otherwise BGR)
+        :param smooth_eps: epsilon for label smoothing (e.g., smooth_eps=0.1)
         :returns:
         :rtype:
 
         """
-        self.table = table
-        self.data_col = data_col
+        if augs is None and self.augs == []:  # init augs for the first time
+            self.augs = [None] * self.num_splits
+        else:
+            if len(augs) != self.num_splits:
+                raise ValueError(f"Length of augmentations should be {self.num_splits}")
+            self.augs = augs
+        if bs is not None:
+            self.batch_size = bs
+        if full_batches is not None:
+            self._full_batches = full_batches
+        if table is not None:
+            self.table = table
+        if data_col is not None:
+            self.data_col = data_col
+        if label_map is not None:
+            self.label_map = label_map
+        if rgb is not None:
+            self.rgb = rgb
+        if smooth_eps is not None:
+            self.smooth_eps = eps
         self._reset_indexes()
 
     def save_rows(self, filename):
@@ -503,7 +533,6 @@ class CassandraDataset:
             self.id_col,
             self.num_classes,
             self._clm._rows,
-            self.metatable,
         )
 
         with open(filename, "wb") as f:
@@ -527,12 +556,10 @@ class CassandraDataset:
             self.id_col,
             self.num_classes,
             clm_rows,
-            metatable,
         ) = stuff
 
         self.init_listmanager(
             table=clm_table,
-            metatable=metatable,
             grouping_cols=clm_grouping_cols,
             id_col=self.id_col,
             num_classes=self.num_classes,
@@ -568,16 +595,14 @@ class CassandraDataset:
             "data_col": self.data_col,
             "row_keys": self.row_keys,
             "split": self.split,
-            "metatable": self.metatable,
         }
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
 
-    def load_splits(self, filename, augs=None):
+    def load_splits(self, filename):
         """Load list of split ids and optionally set batch_size and augmentations.
 
         :param filename: Local filename, as string
-        :param augs: Data augmentations to be used. If None use the current ones.
         :returns:
         :rtype:
 
@@ -596,31 +621,27 @@ class CassandraDataset:
             data_col = stuff["data_col"]
             self.row_keys = stuff["row_keys"]
             split = stuff["split"]
-            metatable = stuff["metatable"]
 
         # recreate listmanager
         self.init_listmanager(
             table=clm_table,
-            metatable=metatable,
             grouping_cols=clm_grouping_cols,
             id_col=self.id_col,
             label_col=label_col,
             label_map=label_map,
             num_classes=self.num_classes,
         )
-        # init data table
-        self.init_datatable(table=table, data_col=data_col)
         # reload splits
         self.split = split
         self.n = self.row_keys.shape[0]  # set size
         num_splits = len(self.split)
         self._update_split_params(
             num_splits=num_splits,
-            augs=augs,
         )
+        # init data table
+        self.set_config(table=table, data_col=data_col)
 
-    def _update_split_params(self, num_splits, augs=None):
-        self._set_augs(augs)
+    def _update_split_params(self, num_splits):
         self.num_splits = num_splits
         # create a lock per split
         self.locks = [threading.Lock() for i in range(self.num_splits)]
@@ -629,7 +650,6 @@ class CassandraDataset:
         self,
         max_patches=None,
         split_ratios=None,
-        augs=None,
         balance=None,
         seed=None,
         bags=None,
@@ -638,7 +658,6 @@ class CassandraDataset:
 
         :param max_patches: Number of patches to be read. If None use all images.
         :param split_ratios: Ratio among training, validation and test. If None use the current value.
-        :param augs: Data augmentations to be used. If None use the current ones.
         :param balance: Ratio among the different classes. If None use the current value.
         :param seed: Seed for random generators
         :param bags: User provided bags for the each split
@@ -659,7 +678,6 @@ class CassandraDataset:
         num_splits = self._clm.num_splits
         self._update_split_params(
             num_splits=num_splits,
-            augs=augs,
         )
 
     def _ignore_batch(self, cs):
@@ -692,10 +710,7 @@ class CassandraDataset:
             self.previous_index.append(0)
             self._loaded_batches.append(0)
             # set up handlers with augmentations
-            if len(self.augs) > cs:
-                aug = self.augs[cs]
-            else:
-                aug = None
+            aug = self.augs[cs]
             ap = self.auth_prov
             handler = BatchPatchHandler(
                 num_classes=self.num_classes,
@@ -721,77 +736,6 @@ class CassandraDataset:
                 self.num_batches.append(self.split[cs].shape[0] // self.batch_size)
             # preload batches
             self._preload_batch(cs)
-
-    def set_label_map(self, label_map=[]):
-        """Set label map
-
-        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
-        :returns:
-        :rtype:
-
-        """
-        self.label_map = label_map
-        self._reset_indexes()
-
-    def set_rgb(self, rgb=True):
-        """Set RGB value
-
-        :param rgb: True if using RGB (otherwise BGR)
-        :returns:
-        :rtype:
-
-        """
-        self.rgb = rgb
-        self._reset_indexes()
-
-    def set_smooth_eps(self, eps=0.0):
-        """Set epsilon value for label smoothing
-
-        :param eps: new epsilon
-        :returns:
-        :rtype:
-
-        """
-        self.smooth_eps = eps
-        self._reset_indexes()
-
-    def set_batchsize(self, bs, full_batches=False):
-        """Change dataset batch size
-
-        :param bs: Batch size when loading data
-        :param full_batches: Use only full batches
-        :returns:
-        :rtype:
-
-        """
-        self.batch_size = bs
-        self._full_batches = full_batches
-        self._reset_indexes()
-
-    def _set_augs(self, augs):
-        """Change used augmentations
-
-        :param augs: Data augmentations to be used.
-        :returns:
-        :rtype:
-
-        """
-        # update augmentations, default: []
-        if augs is not None:
-            self.augs = augs
-        if self.augs is None:
-            self.augs = []
-
-    def set_augmentations(self, augs):
-        """Change used augmentations
-
-        :param augs: Data augmentations to be used.
-        :returns:
-        :rtype:
-
-        """
-        self._set_augs(augs)
-        self._reset_indexes()
 
     def rewind_splits(self, chosen_split=None, shuffle=False):
         """Rewind/reshuffle rows in chosen split and reset its current index
