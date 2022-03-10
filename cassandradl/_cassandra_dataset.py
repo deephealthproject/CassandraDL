@@ -1,4 +1,4 @@
-# Copyright 2021 CRS4
+# Copyright 2021-2 CRS4
 #
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
@@ -28,36 +28,27 @@ from cassandra.cluster import ExecutionProfile
 
 
 class CassandraDataset:
-    def __init__(self, auth_prov, cassandra_ips, port=9042, seed=None):
+    def __init__(self, auth_prov, cassandra_ips, port=9042):
         """Create ECVL Dataset from Cassandra DB
 
         :param auth_prov: Authenticator for Cassandra
         :param cassandra_ips: List of Cassandra ip's
         :param port: TCP port to connect to (default: 9042)
-        :param seed: Seed for random generators
         :returns:
         :rtype:
 
         """
-        # seed random generators
-        random.seed(seed)
-        if seed is None:
-            seed = random.getrandbits(32)
-            random.seed(seed)
-        np.random.seed(seed)
-        self.seed = seed
-        print(f"Seed used by random generators: {seed}")
         # cassandra parameters
         self.cassandra_ips = cassandra_ips
         self.auth_prov = auth_prov
         self.port = port
         # query variables
         self.table = None
-        self.id_col = None
-        self.label_col = None
+        self.label_col = "label"
         self.label_map = []
+        self.id_col = None
         self.data_col = "data"
-        self.num_classes = None
+        self.num_classes = 2
         self.prep = None
         # internal parameters
         self.row_keys = None
@@ -75,7 +66,7 @@ class CassandraDataset:
         self.n = None
         self.split = None
         self.num_splits = None
-        self._clm = None  # Cassandra list manager
+        self._lm_config = None  # configuration of list manager
         self.smooth_eps = 0.0
         """Epsilon value for label smoothing"""
         self.rgb = False
@@ -84,86 +75,69 @@ class CassandraDataset:
     def __del__(self):
         self._ignore_batches()
 
-    def init_listmanager(
-        self,
-        table,
-        id_col,
-        label_col="label",
-        label_map=[],
-        grouping_cols=[],
-        num_classes=2,
-    ):
-        """Initialize the Cassandra list manager.
-
-        It takes care of loading/saving the full list of rows from the
-        DB and creating the splits according to the user input.
-
-        :param table: Metadata by natural keys
-        :param id_col: Cassandra id column for the images (e.g., 'patch_id')
-        :param label_col: Cassandra label column (default: 'label')
-        :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
-        :param grouping_cols: Columns to group by (e.g., ['patient_id'])
-        :param num_classes: Number of classes (default: 2)
-        :returns:
-        :rtype:
-
-        """
-        self.id_col = id_col
-        self.label_col = label_col
-        self.label_map = label_map
-        self.num_classes = num_classes
-        self._clm = CassandraListManager(
-            auth_prov=self.auth_prov, cassandra_ips=self.cassandra_ips, port=self.port
-        )
-        self._clm.set_config(
-            table=table,
-            grouping_cols=grouping_cols,
-            id_col=self.id_col,
-            label_col=self.label_col,
-            label_map=self.label_map,
-            num_classes=self.num_classes,
-            seed=self.seed,
-        )
+    def _set_seed(self, seed):
+        random.seed(seed)
+        if seed is None:
+            seed = random.getrandbits(32)
+            random.seed(seed)
+        np.random.seed(seed)
+        self.seed = seed
 
     def set_config(
         self,
         bs=None,
         table=None,
+        num_classes=None,
+        id_col=None,
         data_col=None,
         full_batches=None,
         augs=None,
+        label_col=None,
         label_map=None,
         rgb=None,
         smooth_eps=None,
+        seed=None,
     ):
         """Set data loading configuration parameters
 
         :param bs: Batch size when loading data
         :param full_batches: Use only full batches
         :param table: Data table, indexed by uuid
+        :param num_classes: Number of classes (default: 2)
+        :param id_col: Cassandra id column for the images (e.g., 'patch_id')
         :param data_col: Cassandra blob image column (default: 'data')
         :param augs: Data augmentations to be used
+        :param label_col: Cassandra label column (e.g., 'label')
         :param label_map: Transformation map for labels (e.g., [1,0] inverts the two classes)
         :param rgb: True if using RGB (otherwise BGR)
         :param smooth_eps: epsilon for label smoothing (e.g., smooth_eps=0.1)
+        :param seed: Seed for random generators
         :returns:
         :rtype:
 
         """
-        if augs is None and self.augs == []:  # init augs for the first time
-            self.augs = [None] * self.num_splits
+        self._set_seed(seed)
+        if augs is None:
+            if self.augs == []:  # init augs for the first time
+                self.augs = [None] * self.num_splits
         else:
             if len(augs) != self.num_splits:
                 raise ValueError(f"Length of augmentations should be {self.num_splits}")
             self.augs = augs
         if bs is not None:
             self.batch_size = bs
+        if num_classes is not None:
+            self.num_classes = num_classes
         if full_batches is not None:
             self._full_batches = full_batches
         if table is not None:
             self.table = table
         if data_col is not None:
             self.data_col = data_col
+        if id_col is not None:
+            self.id_col = id_col
+        if label_col is not None:
+            self.label_col = label_col
         if label_map is not None:
             self.label_map = label_map
         if rgb is not None:
@@ -171,16 +145,6 @@ class CassandraDataset:
         if smooth_eps is not None:
             self.smooth_eps = eps
         self._reset_indexes()
-
-    def read_rows_from_db(self, sample_whitelist=None):
-        """Read the full list of rows from the DB.
-
-        :param sample_whitelist: Whitelist for group keys
-        :returns:
-        :rtype:
-
-        """
-        self._clm.read_rows_from_db(sample_whitelist)
 
     def save_splits(self, filename):
         """Save list of split ids.
@@ -191,16 +155,16 @@ class CassandraDataset:
 
         """
         stuff = {
-            "clm_table": self._clm.table,
-            "clm_grouping_cols": self._clm.grouping_cols,
-            "id_col": self.id_col,
+            "_lm_config": self._lm_config,
             "num_classes": self.num_classes,
             "label_map": self.label_map,
             "table": self.table,
             "label_col": self.label_col,
             "data_col": self.data_col,
+            "id_col": self.id_col,
             "row_keys": self.row_keys,
             "split": self.split,
+            "seed": self.seed,
         }
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
@@ -217,68 +181,49 @@ class CassandraDataset:
         with open(filename, "rb") as f:
             stuff = pickle.load(f)
 
-        clm_table = stuff["clm_table"]
-        clm_grouping_cols = stuff["clm_grouping_cols"]
-        self.id_col = stuff["id_col"]
-        self.num_classes = stuff["num_classes"]
+        self._lm_config = stuff["_lm_config"]
+        num_classes = stuff["num_classes"]
         label_map = stuff["label_map"]
         table = stuff["table"]
         label_col = stuff["label_col"]
         data_col = stuff["data_col"]
+        id_col = stuff["id_col"]
+        seed = stuff["seed"]
         self.row_keys = stuff["row_keys"]
-        split = stuff["split"]
+        self.split = stuff["split"]
 
-        # recreate listmanager
-        self.init_listmanager(
-            table=clm_table,
-            grouping_cols=clm_grouping_cols,
-            id_col=self.id_col,
-            label_col=label_col,
-            label_map=label_map,
-            num_classes=self.num_classes,
-        )
         # reload splits
-        self.split = split
         self.n = self.row_keys.shape[0]  # set size
         num_splits = len(self.split)
         self._update_split_params(
             num_splits=num_splits,
         )
         # init data table
-        self.set_config(table=table, data_col=data_col)
+        self.set_config(
+            table=table,
+            data_col=data_col,
+            num_classes=num_classes,
+            id_col=id_col,
+            label_col=label_col,
+            label_map=label_map,
+            seed=seed,
+        )
 
     def _update_split_params(self, num_splits):
         self.num_splits = num_splits
         # create a lock per split
         self.locks = [threading.Lock() for i in range(self.num_splits)]
 
-    def split_setup(
-        self,
-        max_patches=None,
-        split_ratios=None,
-        balance=None,
-        seed=None,
-        bags=None,
-    ):
-        """(Re)Insert the patches in the splits, according to split and class ratios
+    def use_splits(self, list_manager):
+        """Use splits created by specified list manager
 
-        :param max_patches: Number of patches to be read. If None use all images.
-        :param split_ratios: Ratio among training, validation and test. If None use the current value.
-        :param balance: Ratio among the different classes. If None use the current value.
-        :param seed: Seed for random generators
-        :param bags: User provided bags for the each split
+        :param list_manager: List manager to be used
         :returns:
         :rtype:
 
         """
-        self._clm.split_setup(
-            max_patches=max_patches,
-            split_ratios=split_ratios,
-            balance=balance,
-            seed=seed,
-            bags=bags,
-        )
-        self.row_keys, self.split = self._clm.get_split()
+        self._lm_config = list_manager.get_config()  # save lm configuration
+        self.row_keys, self.split = list_manager.get_splits()
         self.n = self.row_keys.shape[0]
         num_splits = len(self.split)
         self._update_split_params(

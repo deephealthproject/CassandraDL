@@ -1,10 +1,10 @@
-# Copyright 2021 CRS4
+# Copyright 2021-2 CRS4
 #
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-from cassandradl import CassandraDataset
+from cassandradl import CassandraDataset, CassandraListManager
 
 import pyecvl.ecvl as ecvl
 from cassandra.auth import PlainTextAuthProvider
@@ -25,16 +25,27 @@ except ImportError:
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
-cd = CassandraDataset(ap, [cassandra_ip])
-cd.init_listmanager(
+id_col = "patch_id"
+label_col = "label"
+num_classes = 10
+clm = CassandraListManager(ap, [cassandra_ip])
+clm.set_config(
     table="imagenette.ids_224",
-    id_col="patch_id",
-    label_col="label",
-    num_classes=10,
+    id_col=id_col,
+    label_col=label_col,
+    num_classes=num_classes,
 )
-cd.read_rows_from_db()
-cd.split_setup(split_ratios=[7, 2, 1])
-cd.set_config(table="imagenette.data_224", bs=28)
+clm.read_rows_from_db()
+clm.split_setup(split_ratios=[7, 2, 1])
+cd = CassandraDataset(ap, [cassandra_ip])
+cd.use_splits(clm)
+cd.set_config(
+    table="imagenette.data_224",
+    bs=28,
+    id_col=id_col,
+    label_col=label_col,
+    num_classes=num_classes,
+)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)
@@ -58,18 +69,29 @@ training_augs = ecvl.SequentialAugmentationContainer(
 )
 augs = [training_augs, None]
 
-cd = CassandraDataset(ap, [cassandra_ip])
-cd.init_listmanager(
+
+clm = CassandraListManager(ap, [cassandra_ip])
+clm.set_config(
     table="imagenette.ids_224",
-    id_col="patch_id",
     grouping_cols=["or_split"],
-    num_classes=10,
+    id_col=id_col,
+    label_col=label_col,
+    num_classes=num_classes,
 )
-cd.read_rows_from_db()
-cd.split_setup(
+clm.read_rows_from_db()
+clm.split_setup(
     bags=[[("train",)], [("val",)]],
 )
-cd.set_config(bs=28, table="imagenette.data_224", augs=augs)
+cd = CassandraDataset(ap, [cassandra_ip])
+cd.use_splits(clm)
+cd.set_config(
+    table="imagenette.data_224",
+    bs=28,
+    augs=augs,
+    id_col=id_col,
+    label_col=label_col,
+    num_classes=num_classes,
+)
 
 for _ in range(5):
     cd.rewind_splits(shuffle=True)

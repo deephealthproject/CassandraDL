@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'CassandraDL'
-copyright = '2021, CRS4'
+copyright = '2021-2, CRS4'
 author = 'Francesco Versaci and Giovanni Busonera'
 
 

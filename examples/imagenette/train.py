@@ -1,11 +1,11 @@
-# Copyright 2021 CRS4
+# Copyright 2021-2 CRS4
 #
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
 from cassandra.auth import PlainTextAuthProvider
-from cassandradl import CassandraDataset
+from cassandradl import CassandraDataset, CassandraListManager
 from getpass import getpass
 from pyeddl.tensor import Tensor
 from tqdm import trange, tqdm
@@ -113,19 +113,29 @@ def main(args):
 
     # Init Cassandra dataset
     ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
-    cd = CassandraDataset(ap, [cassandra_ip])
-
-    cd.init_listmanager(
+    id_col = "patch_id"
+    label_col = "label"
+    clm = CassandraListManager(ap, [cassandra_ip])
+    clm.set_config(
         table="imagenette.ids_224",
-        id_col="patch_id",
         grouping_cols=["or_split"],
+        id_col=id_col,
+        label_col=label_col,
         num_classes=num_classes,
     )
-    cd.read_rows_from_db()
-    cd.split_setup(
+    clm.read_rows_from_db()
+    clm.split_setup(
         bags=[[("train",)], [("val",)]],
     )
-    cd.set_config(bs=args.batch_size, table="imagenette.data_224")
+    cd = CassandraDataset(ap, [cassandra_ip])
+    cd.use_splits(clm)
+    cd.set_config(
+        table="imagenette.data_224",
+        bs=args.batch_size,
+        id_col=id_col,
+        label_col=label_col,
+        num_classes=num_classes,
+    )
 
     num_batches_tr = cd.num_batches[0] - 1
     num_batches_val = cd.num_batches[1] - 1

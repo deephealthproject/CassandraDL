@@ -11,6 +11,8 @@ Welcome to CassandraDL's documentation!
    :caption: Contents:
 
    cassandradl.CassandraDataset
+   cassandradl.CassandraListManager
+   cassandradl.ListManager
    cassandradl._cassandra_writer
 
 Indices and tables

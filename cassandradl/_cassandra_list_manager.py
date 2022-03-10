@@ -1,4 +1,4 @@
-# Copyright 2021 CRS4
+# Copyright 2021-2 CRS4
 #
 # Use of this source code is governed by an MIT-style
 # license that can be found in the LICENSE file or at
@@ -17,6 +17,7 @@ import threading
 from tqdm import trange, tqdm
 from BPH import BatchPatchHandler
 from collections import defaultdict
+from cassandradl._list_manager import ListManager
 
 # pip3 install cassandra-driver
 import cassandra
@@ -24,15 +25,6 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.cluster import ExecutionProfile
-
-
-class ListManager:
-    def __init__(self):
-        self.row_keys = None
-        self.split = None
-
-    def get_split(self):
-        return self.row_keys, self.split
 
 
 class CassandraListManager(ListManager):
@@ -97,13 +89,24 @@ class CassandraListManager(ListManager):
         self.split_ratios = None
         self.num_splits = None
 
+    def __del__(self):
+        self.cluster.shutdown()
+
+    def _set_seed(self, seed):
+        random.seed(seed)
+        if seed is None:
+            seed = random.getrandbits(32)
+            random.seed(seed)
+        np.random.seed(seed)
+        self.seed = seed
+
     def set_config(
         self,
         table,
         id_col,
         label_col="label",
-        grouping_cols=[],
         label_map=[],
+        grouping_cols=[],
         num_classes=2,
         seed=None,
     ):
@@ -121,22 +124,31 @@ class CassandraListManager(ListManager):
 
         """
         super().__init__()
-        random.seed(seed)
-        np.random.seed(seed)
+        self._set_seed(seed)
         self.table = table
         # row variables
         self.grouping_cols = grouping_cols
         self.id_col = id_col
         self.label_col = label_col
         self.label_map = label_map
-        self.seed = seed
         self.num_classes = num_classes
         self.labs = list(range(self.num_classes))
 
-    def __del__(self):
-        self.cluster.shutdown()
+    def get_config(self):
+        conf = {
+            "table": self.table,
+            "grouping_cols": self.grouping_cols,
+            "id_col": self.id_col,
+            "label_col": self.label_col,
+            "label_map": self.label_map,
+            "num_classes": self.num_classes,
+            "seed": self.seed,
+        }
+        return conf
 
     def read_rows_from_db(self, sample_whitelist=None):
+        # reset seed
+        self._set_seed(self.seed)
         # get list of all rows
         if self.grouping_cols:
             gc_query = ",".join(self.grouping_cols) + ","
@@ -352,7 +364,6 @@ class CassandraListManager(ListManager):
         max_patches=None,
         split_ratios=None,
         balance=None,
-        seed=None,
         bags=None,
     ):
         """(Re)Insert the patches in the splits, according to split and class ratios
@@ -360,15 +371,13 @@ class CassandraListManager(ListManager):
         :param max_patches: Number of patches to be read. If None use all patches.
         :param split_ratios: Ratio among training, validation and test. If None use the current value.
         :param balance: Ratio among the different classes. If None use the current value.
-        :param seed: Seed for random generators
         :param bags: User provided bags for the each split
         :returns:
         :rtype:
 
         """
-        # seed random generators
-        random.seed(seed)
-        np.random.seed(seed)
+        # reset seed
+        self._set_seed(self.seed)
         # if bags are provided, infer split_ratio
         if bags:
             split_ratios = [1] * len(bags)
@@ -407,12 +416,10 @@ class CassandraListManager(ListManager):
         :rtype:
 
         """
+        conf = self.get_config()
         stuff = {
-            "table": self.table,
-            "grouping_cols": self.grouping_cols,
-            "id_col": self.id_col,
-            "num_classes": self.num_classes,
             "_rows": self._rows,
+            "config": conf,
         }
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
@@ -429,16 +436,23 @@ class CassandraListManager(ListManager):
         with open(filename, "rb") as f:
             stuff = pickle.load(f)
 
-        table = stuff["table"]
-        grouping_cols = stuff["grouping_cols"]
-        id_col = stuff["id_col"]
-        num_classes = stuff["num_classes"]
         _rows = stuff["_rows"]
+        conf = stuff["config"]
+        table = conf["table"]
+        grouping_cols = conf["grouping_cols"]
+        id_col = conf["id_col"]
+        label_col = conf["label_col"]
+        label_map = conf["label_map"]
+        num_classes = conf["num_classes"]
+        seed = conf["seed"]
 
         self.set_config(
             table=table,
-            grouping_cols=grouping_cols,
             id_col=id_col,
+            label_col=label_col,
+            label_map=label_map,
+            grouping_cols=grouping_cols,
             num_classes=num_classes,
+            seed=seed,
         )
         self.set_rows(_rows)
