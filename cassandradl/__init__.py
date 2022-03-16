@@ -5,6 +5,6 @@
 # https://opensource.org/licenses/MIT.
 
 from cassandradl._cassandra_dataset import CassandraDataset
-from cassandradl._list_manager import CassandraListManager
+from cassandradl._list_manager import ListManager
 from cassandradl._cassandra_list_manager import CassandraListManager
 from cassandradl._cassandra_writer import CassandraWriter
