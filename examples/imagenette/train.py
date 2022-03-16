@@ -223,7 +223,7 @@ if __name__ == "__main__":
         "--epochs", type=int, metavar="INT", default=10, help="Number of epochs"
     )
     parser.add_argument(
-        "--batch-size", type=int, metavar="INT", default=28, help="Batch size"
+        "--batch-size", type=int, metavar="INT", default=24, help="Batch size"
     )
     parser.add_argument(
         "--lsb",
