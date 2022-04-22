@@ -138,6 +138,7 @@ class CassandraListManager:
             for lab in self._rows[ks]:
                 random.shuffle(self._rows[ks][lab])
         # save some statistics
+        self._rows = dict(self._rows)  # convert to normal (pickable) dict
         self._after_rows()
 
     def _after_rows(self):
